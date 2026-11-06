@@ -1,0 +1,1631 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>一人食光 · 按冰箱食材，配今晚的一人食菜单</title>
+  <meta name="description" content="内测版一人食菜单工具：勾选冰箱食材与条件，生成带精确一人份用量、调料、锅具与步骤的菜谱，支持缺料替换、烹饪模式与收藏。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #FDF8F1;
+      --bg-chat: #FBF5EE;
+      --white: #FFFFFF;
+      --text: #33261F;
+      --text-2: #6B5B52;
+      --text-3: #7A685E;
+      --text-4: #7F7066;
+      --coral: #FF5A5F;
+      --coral-btn: #C93F45;
+      --coral-btn-hover: #B3343A;
+      --coral-light: #FFECE8;
+      --coral-deep: #B4453F;
+      --honey: #F2A93B;
+      --honey-light: #FDF3E3;
+      --honey-deep: #8A5D10;
+      --green: #5BB98B;
+      --green-light: #E9F4EC;
+      --green-deep: #3B6B4F;
+      --chip-ink: #8A6234;
+      --border: #EDE2D8;
+      --shadow-soft: 0 24px 48px -12px rgba(140, 86, 62, 0.12);
+      --shadow-card: 0 12px 32px -8px rgba(140, 86, 62, 0.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg); color: var(--text); line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display: block; }
+    :focus-visible { outline: 3px solid var(--coral-btn); outline-offset: 2px; border-radius: 4px; }
+
+    .skip-link { position: absolute; left: -9999px; top: 0; z-index: 300; background: var(--white); color: var(--coral-deep); padding: 10px 16px; font-size: 14px; font-weight: 600; }
+    .skip-link:focus { left: 0; }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 48px; }
+    @media (max-width: 640px) { .container { padding: 0 20px; } }
+
+    /* Header */
+    .header { position: sticky; top: 0; z-index: 100; background: rgba(253,248,241,0.94); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(237,226,216,0.8); }
+    .header-inner { display: flex; align-items: center; justify-content: space-between; height: 72px; }
+    .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; }
+    .logo-icon { width: 32px; height: 32px; color: var(--coral); }
+    .nav { display: flex; align-items: center; gap: 26px; }
+    .nav a { font-size: 15px; font-weight: 500; color: var(--text-3); padding: 8px 2px; }
+    .nav a:hover { color: var(--coral-btn); }
+    .nav a.is-primary { color: var(--coral-deep); font-weight: 600; border-bottom: 2px solid var(--coral); }
+
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: none; cursor: pointer; font-family: inherit; font-weight: 600; font-size: 14px; padding: 11px 22px; min-height: 44px; border-radius: 999px; transition: transform .15s, background .2s, color .2s, border-color .2s; white-space: nowrap; }
+    .btn:active { transform: translateY(1px); }
+    .btn-primary { background: var(--coral-btn); color: #fff; box-shadow: 0 10px 24px -8px rgba(180,69,63,.5); }
+    .btn-primary:hover { background: var(--coral-btn-hover); }
+    .btn-secondary { background: var(--white); color: var(--text-2); border: 1.5px solid var(--border); }
+    .btn-secondary:hover { border-color: var(--coral-btn); color: var(--coral-deep); }
+    .btn-ghost { background: transparent; color: var(--text-2); border: 1.5px solid transparent; }
+    .btn-ghost:hover { color: var(--coral-deep); }
+
+    .mobile-menu { display: none; width: 44px; height: 44px; background: none; border: none; cursor: pointer; color: var(--text); }
+    .mobile-nav { display: none; border-top: 1px solid var(--border); background: var(--white); padding: 8px 0 16px; }
+    .mobile-nav.open { display: block; }
+    .mobile-nav a { display: block; padding: 14px 20px; min-height: 48px; font-size: 16px; font-weight: 500; color: var(--text-2); border-bottom: 1px solid var(--bg); }
+    .mobile-nav a.is-primary { color: var(--coral-deep); font-weight: 600; }
+    @media (max-width: 900px) {
+      .nav { display: none; }
+      .mobile-menu { display: grid; place-items: center; }
+      .header-inner > .btn { display: none; }
+      .mobile-nav .btn { margin: 12px 20px 0; width: calc(100% - 40px); }
+    }
+
+    /* Hero */
+    .hero { position: relative; overflow: hidden; padding: 60px 0 72px; }
+    .hero::before, .hero::after { content: ""; position: absolute; border-radius: 50%; pointer-events: none; filter: blur(80px); opacity: .32; }
+    .hero::before { width: 520px; height: 520px; right: -120px; top: -140px; background: radial-gradient(circle, rgba(255,90,95,.4), transparent 70%); }
+    .hero::after { width: 460px; height: 460px; left: -140px; bottom: -120px; background: radial-gradient(circle, rgba(242,169,59,.4), transparent 70%); }
+    .hero-inner { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; text-align: center; }
+    .hero-text { max-width: 780px; margin: 0 auto; }
+    .badge { display: inline-flex; align-items: center; gap: 8px; background: var(--coral-light); color: var(--coral-deep); font-size: 13px; font-weight: 600; padding: 7px 16px; border-radius: 999px; margin-bottom: 18px; }
+    .badge-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--coral); }
+    .hero h1 { font-size: clamp(38px, 5vw, 54px); font-weight: 700; line-height: 1.2; letter-spacing: 2px; margin-bottom: 16px; }
+    .hero h1 .accent { color: var(--coral-btn); }
+    .hero-desc { font-size: 17px; color: var(--text-3); line-height: 1.8; max-width: 580px; margin: 0 auto 26px; }
+    .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; margin-bottom: 12px; }
+    .hero-actions .btn { padding: 14px 30px; font-size: 16px; min-height: 50px; }
+    .hero-note { font-size: 13px; color: var(--text-4); }
+    .hero-stats { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 24px; }
+    .hero-stat { display: flex; align-items: center; gap: 8px; padding: 9px 16px; background: rgba(255,255,255,.75); border: 1px solid var(--border); border-radius: 999px; font-size: 13px; font-weight: 500; color: var(--text-2); box-shadow: var(--shadow-card); }
+    .hero-stat svg { width: 17px; height: 17px; color: var(--coral-btn); flex-shrink: 0; }
+
+    /* Section */
+    .section { padding: 76px 0; }
+    .section.alt { background: var(--white); }
+    .section-head { text-align: center; margin-bottom: 32px; }
+    .section-head .eyebrow { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--coral-deep); background: var(--coral-light); padding: 4px 12px; border-radius: 999px; margin-bottom: 12px; }
+    .section-head h2 { font-size: clamp(24px, 3.6vw, 34px); font-weight: 700; margin-bottom: 8px; }
+    .section-head p { font-size: 16px; color: var(--text-3); max-width: 660px; margin: 0 auto; }
+    .panel { max-width: 920px; margin: 0 auto; background: var(--white); border: 1px solid var(--border); border-radius: 24px; box-shadow: var(--shadow-soft); padding: 30px; }
+
+    .notice { display: flex; gap: 12px; align-items: flex-start; background: var(--honey-light); border: 1px solid #F0DFC2; color: #6B4B0E; border-radius: 14px; padding: 14px 16px; font-size: 13px; line-height: 1.75; margin-bottom: 22px; max-width: 860px; margin-left: auto; margin-right: auto; }
+    .notice svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 2px; color: var(--honey-deep); }
+    .notice b { color: #5A3E08; }
+    .notice details { margin-top: 6px; }
+    .notice summary { cursor: pointer; font-weight: 600; }
+    .notice details p { margin-top: 6px; color: #6B4B0E; }
+
+    /* Preferences */
+    .prefs { border: 1px dashed #E3D2C0; background: #FFFBF6; border-radius: 16px; padding: 18px; margin-bottom: 22px; }
+    .prefs-title { font-size: 14px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .pref-row { display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 12px; }
+    .pref-row:last-child { margin-bottom: 0; }
+    .pref-label { font-size: 13px; font-weight: 600; color: var(--text-2); width: 76px; flex-shrink: 0; padding-top: 10px; }
+    .pref-chips { display: flex; flex-wrap: wrap; gap: 8px; flex: 1; }
+    .pref-chip { padding: 9px 15px; min-height: 40px; border-radius: 999px; background: var(--white); border: 1.5px solid var(--border); color: var(--text-2); font-size: 13px; font-weight: 500; cursor: pointer; }
+    .pref-chip:hover { border-color: var(--coral-light); color: var(--coral-deep); }
+    .pref-chip[aria-pressed="true"] { background: var(--coral-btn); border-color: var(--coral-btn); color: #fff; }
+
+    /* Ingredients */
+    .ing-label { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+    .selected-count { font-size: 13px; font-weight: 600; color: var(--coral-deep); background: var(--coral-light); padding: 5px 13px; border-radius: 999px; }
+    .ing-group { margin-top: 16px; }
+    .ing-group-title { font-size: 13px; font-weight: 700; color: var(--text-3); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+    .ing-group-title::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+    .ing-chips { display: flex; flex-wrap: wrap; gap: 10px; }
+    .ing-chip { padding: 10px 18px; min-height: 44px; border-radius: 999px; background: #FFF6EE; border: 1.5px solid var(--border); color: var(--chip-ink); font-size: 14px; font-weight: 500; cursor: pointer; transition: all .15s; user-select: none; }
+    .ing-chip:hover { border-color: var(--coral-light); color: var(--coral-deep); }
+    .ing-chip[aria-pressed="true"] { background: var(--coral-btn); border-color: var(--coral-btn); color: #fff; box-shadow: 0 8px 18px -6px rgba(180,69,63,.55); }
+    .ing-chip.extra { display: none; }
+    .ing-chips.show-extra .ing-chip.extra { display: inline-flex; }
+    .ing-more { margin-top: 14px; background: none; border: none; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 600; color: var(--coral-deep); padding: 8px 0; min-height: 40px; display: inline-flex; align-items: center; gap: 6px; }
+    .ing-more:hover { text-decoration: underline; }
+
+    .custom-row { display: flex; align-items: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+    .custom-row label { font-size: 14px; font-weight: 500; color: var(--text-2); }
+    .custom-input { flex: 1; min-width: 180px; max-width: 260px; border: 1.5px solid var(--border); outline: none; background: var(--bg-chat); border-radius: 999px; padding: 11px 16px; font-size: 14px; color: var(--text); font-family: inherit; min-height: 44px; }
+    .custom-chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+    .custom-chip { display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; min-height: 44px; border-radius: 999px; background: var(--coral-btn); color: #fff; font-size: 14px; font-weight: 500; border: none; cursor: pointer; }
+    .custom-chip .remove { width: 20px; height: 20px; border-radius: 50%; background: rgba(255,255,255,.28); display: grid; place-items: center; font-size: 13px; }
+    .custom-chip .remove:hover { background: rgba(255,255,255,.5); }
+
+    .ing-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 22px; }
+    .ing-hint { font-size: 13px; color: var(--text-4); }
+    .ing-hint.warn { color: var(--coral-deep); font-weight: 600; }
+
+    .result-wrap { margin-top: 26px; }
+    .result-banner { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--green-deep); flex-wrap: wrap; }
+    .result-banner .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+
+    /* Usage summary */
+    .usage { background: var(--bg-chat); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; margin-bottom: 14px; font-size: 13px; line-height: 1.8; }
+    .usage-line { display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+    .usage-line + .usage-line { margin-top: 6px; }
+    .usage-label { font-weight: 700; color: var(--text-2); flex-shrink: 0; }
+    .usage-tag { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+    .usage-tag.used { background: var(--green-light); color: var(--green-deep); }
+    .usage-tag.unused { background: var(--honey-light); color: var(--honey-deep); }
+    .usage-note { margin-top: 8px; color: var(--text-3); }
+    .usage-actions { margin-top: 10px; }
+
+    /* Recipe card */
+    .recipe-card { background: #FFFBF6; border: 1px solid #F0DFCB; border-radius: 20px; padding: 22px; }
+    .rc-head { display: flex; gap: 16px; margin-bottom: 18px; }
+    .rc-img { width: 132px; height: 132px; border-radius: 14px; object-fit: cover; flex-shrink: 0; background: var(--bg-chat); }
+    .rc-info { flex: 1; min-width: 0; }
+    .rc-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+    .rc-desc { font-size: 13px; color: var(--text-3); }
+    .tags { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+    .tag { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
+    .tag.coral { background: var(--coral-light); color: var(--coral-deep); }
+    .tag.honey { background: var(--honey-light); color: var(--honey-deep); }
+    .tag.green { background: var(--green-light); color: var(--green-deep); }
+
+    .rc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 16px; }
+    .rc-block h5 { font-size: 13px; font-weight: 700; color: var(--text-2); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+    .rc-amounts { list-style: none; font-size: 13px; color: var(--text-2); }
+    .rc-amounts li { padding: 3px 0; border-bottom: 1px dashed #F0E2D2; }
+    .rc-amounts li:last-child { border-bottom: none; }
+    .rc-line { font-size: 13px; color: var(--text-2); margin-bottom: 10px; line-height: 1.7; }
+
+    /* Steps as real buttons */
+    .rc-steps { list-style: none; }
+    .step-btn {
+      display: flex; gap: 12px; align-items: flex-start; width: 100%; text-align: left;
+      background: var(--white); border: 1px solid var(--border); border-radius: 12px;
+      padding: 11px 14px; margin-bottom: 8px; cursor: pointer;
+      font-family: inherit; font-size: 14px; color: var(--text-2); line-height: 1.7;
+      min-height: 48px; transition: background .15s, border-color .15s;
+    }
+    .step-btn:hover { border-color: var(--coral-light); }
+    .step-box {
+      width: 22px; height: 22px; border-radius: 6px; border: 2px solid #DCC9B8; flex-shrink: 0;
+      display: grid; place-items: center; font-size: 12px; font-weight: 700; color: transparent; margin-top: 1px;
+    }
+    .step-btn[aria-pressed="true"] { background: var(--green-light); border-color: #CDE6D8; color: var(--green-deep); }
+    .step-btn[aria-pressed="true"] .step-box { background: var(--green); border-color: var(--green); color: #fff; }
+    .step-btn[aria-pressed="true"] .step-text { text-decoration: line-through; }
+    .cook-progress { font-size: 12px; font-weight: 600; color: var(--green-deep); background: var(--green-light); padding: 2px 8px; border-radius: 999px; }
+
+    .rc-subs { background: var(--honey-light); border-radius: 12px; padding: 12px 14px; font-size: 13px; color: #6B4B0E; margin-bottom: 14px; line-height: 1.7; }
+    .rc-subs b { color: #5A3E08; }
+    .rc-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+    .rc-actions .btn { font-size: 13px; padding: 9px 16px; min-height: 40px; }
+    .rc-fb { font-size: 13px; color: var(--green-deep); margin-top: 10px; min-height: 20px; }
+
+    /* My collection */
+    .mine { max-width: 920px; margin: 26px auto 0; background: var(--white); border: 1px solid var(--border); border-radius: 20px; padding: 22px; box-shadow: var(--shadow-card); }
+    .mine h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+    .mine .mine-sub { font-size: 13px; color: var(--text-4); margin-bottom: 14px; }
+    .mine-chips { display: flex; flex-wrap: wrap; gap: 10px; }
+    .mine-chip { padding: 9px 16px; min-height: 44px; border-radius: 999px; background: #FFF6EE; border: 1.5px solid var(--border); color: var(--chip-ink); font-size: 14px; font-weight: 500; cursor: pointer; }
+    .mine-chip:hover { border-color: var(--coral-light); color: var(--coral-deep); }
+    .mine-chip .star { color: var(--honey-deep); margin-right: 4px; }
+    .mine-empty { font-size: 13px; color: var(--text-4); }
+
+    /* Chat */
+    .chat-window { max-width: 860px; margin: 0 auto; background: #FFFDFB; border: 1px solid var(--border); border-radius: 24px; box-shadow: var(--shadow-soft); overflow: hidden; }
+    .chat-head { display: flex; align-items: center; gap: 12px; padding: 14px 20px; background: var(--white); border-bottom: 1px solid var(--border); }
+    .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--coral-light); display: grid; place-items: center; color: var(--coral-btn); flex-shrink: 0; }
+    .chat-head-info h3 { font-size: 15px; font-weight: 600; }
+    .chat-head-info p { font-size: 12px; color: var(--text-4); }
+    .chat-body { padding: 22px; background: var(--bg-chat); min-height: 300px; max-height: 620px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+    .msg-row { display: flex; width: 100%; }
+    .msg-row.user { justify-content: flex-end; }
+    .bubble { max-width: 88%; padding: 11px 16px; border-radius: 16px; font-size: 14px; line-height: 1.7; word-break: break-word; }
+    .bubble.user { background: var(--coral-btn); color: #fff; border-bottom-right-radius: 4px; }
+    .bubble.ai { background: var(--white); color: var(--text); border-bottom-left-radius: 4px; }
+    .bubble .recipe-card { margin-top: 10px; }
+    .chat-input-bar { display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: var(--white); border-top: 1px solid var(--border); }
+    .chat-input { flex: 1; border: 1.5px solid var(--border); outline: none; background: var(--bg-chat); border-radius: 999px; padding: 12px 18px; font-size: 14px; color: var(--text); font-family: inherit; min-height: 44px; }
+    .chat-input::placeholder { color: var(--text-4); }
+    .send-btn { width: 46px; height: 46px; border-radius: 50%; border: none; background: var(--coral-btn); color: #fff; display: grid; place-items: center; cursor: pointer; flex-shrink: 0; }
+    .send-btn:hover { background: var(--coral-btn-hover); }
+    .typing { display: flex; gap: 4px; padding: 14px 16px; }
+    .typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--text-4); animation: bounce 1.2s infinite ease-in-out; }
+    .typing span:nth-child(2) { animation-delay: .15s; }
+    .typing span:nth-child(3) { animation-delay: .3s; }
+    @keyframes bounce { 0%,80%,100% { transform: translateY(0); } 40% { transform: translateY(-5px); } }
+
+    .quick-topics { margin-top: 24px; text-align: center; }
+    .quick-topics p { font-size: 13px; color: var(--text-4); margin-bottom: 12px; }
+    .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+    .chip { padding: 10px 16px; min-height: 44px; border-radius: 999px; background: #FFF6EE; border: 1.5px solid var(--border); color: var(--chip-ink); font-size: 13px; font-weight: 500; cursor: pointer; }
+    .chip:hover { background: var(--coral-light); border-color: var(--coral-light); color: var(--coral-deep); }
+
+    /* Blind box */
+    .blind-stage { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 24px; position: relative; }
+    .blind-conds { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+    .cond-chip { padding: 9px 16px; min-height: 42px; border-radius: 999px; background: var(--white); border: 1.5px solid var(--border); color: var(--text-2); font-size: 13px; font-weight: 500; cursor: pointer; }
+    .cond-chip[aria-pressed="true"] { background: var(--coral-btn); border-color: var(--coral-btn); color: #fff; }
+    .box-wrap { position: relative; width: 190px; height: 190px; display: grid; place-items: center; }
+    .box-glow { position: absolute; inset: -40px; border-radius: 50%; background: radial-gradient(circle, rgba(255,90,95,.18), transparent 70%); filter: blur(20px); pointer-events: none; }
+    .box-art { width: 150px; height: 150px; }
+    .box-wrap.shaking .box-art { animation: boxShake .4s ease-in-out infinite; }
+    @keyframes boxShake { 0%,100% { transform: rotate(-6deg) translateX(-4px); } 50% { transform: rotate(6deg) translateX(4px); } }
+    .box-status { font-size: 15px; color: var(--text-3); text-align: center; min-height: 26px; font-weight: 500; }
+    .box-status .roll { color: var(--coral-deep); font-weight: 700; }
+    .blind-result { width: 100%; display: none; }
+    .blind-result.show { display: block; animation: fadeUp .45s ease; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+    .confetti { position: absolute; top: 50%; left: 50%; pointer-events: none; z-index: 5; }
+    .confetti span { position: absolute; width: 9px; height: 9px; border-radius: 2px; animation: confettiFly .9s ease-out forwards; }
+    @keyframes confettiFly { from { transform: translate(0,0) rotate(0); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); opacity: 0; } }
+
+    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+    @media (max-width: 900px) { .cards { grid-template-columns: 1fr; } }
+    .card { background: var(--white); border: 1px solid var(--border); border-radius: 22px; padding: 26px; box-shadow: var(--shadow-card); }
+    .icon-bg { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; margin-bottom: 12px; }
+    .icon-bg.coral { background: var(--coral-light); color: var(--coral-btn); }
+    .icon-bg.honey { background: var(--honey-light); color: var(--honey-deep); }
+    .icon-bg.green { background: var(--green-light); color: var(--green-deep); }
+    .card h3 { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .card p { font-size: 14px; color: var(--text-3); line-height: 1.75; }
+
+    .cta { background: var(--white); padding: 72px 0; text-align: center; }
+    .cta h2 { font-size: clamp(26px, 3.8vw, 36px); font-weight: 700; margin-bottom: 12px; }
+    .cta p { color: var(--text-3); margin-bottom: 26px; }
+
+    .footer { background: #33261F; color: #C3B2A4; padding: 52px 0 24px; }
+    .footer-inner { display: flex; justify-content: space-between; gap: 36px; flex-wrap: wrap; margin-bottom: 28px; }
+    .footer-brand { max-width: 320px; }
+    .footer-brand .logo { color: #F5EBDF; margin-bottom: 10px; }
+    .footer-brand p { font-size: 13px; line-height: 1.8; color: #B49F90; }
+    .footer-col h4 { font-size: 13px; font-weight: 700; color: #E4D6C8; margin-bottom: 12px; }
+    .footer-col a { display: block; font-size: 13px; margin-bottom: 10px; color: #C3B2A4; }
+    .footer-col a:hover { color: #fff; text-decoration: underline; }
+    .footer-bottom { border-top: 1px solid #4A382E; padding-top: 16px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; flex-wrap: wrap; gap: 10px; color: #B49F90; }
+    .local-stats { margin-top: 18px; font-size: 12px; color: #B49F90; }
+    .local-stats summary { cursor: pointer; font-weight: 600; color: #D3C3B4; }
+    .local-stats ul { list-style: none; margin-top: 8px; line-height: 1.9; }
+
+    /* Mobile sticky bar */
+    .mobile-bar {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 90; display: none;
+      background: rgba(255,255,255,.97); border-top: 1px solid var(--border);
+      box-shadow: 0 -8px 24px -12px rgba(140,86,62,.28);
+      padding: 10px 20px calc(10px + env(safe-area-inset-bottom));
+    }
+    .mobile-bar.show { display: flex; align-items: center; gap: 12px; }
+    .mobile-bar .mb-info { flex: 1; font-size: 14px; font-weight: 600; color: var(--text-2); }
+    .mobile-bar .mb-info b { color: var(--coral-deep); }
+    @media (max-width: 900px) {
+      body.has-bar { padding-bottom: 84px; }
+      .rc-grid { grid-template-columns: 1fr; }
+      .rc-head { flex-direction: column; }
+      .rc-img { width: 100%; height: 180px; }
+      .pref-label { width: 100%; padding-top: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到主要内容</a>
+
+  <header class="header">
+    <div class="container header-inner">
+      <a href="#main" class="logo" aria-label="一人食光 首页">
+        <svg class="logo-icon" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <path d="M10 11c0-2 1.5-2 1.5-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M15 11c0-2 1.5-2 1.5-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M20 11c0-2 1.5-2 1.5-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M4 15h24a12 11 0 0 1-24 0Z" fill="currentColor"/>
+        </svg>
+        一人食光
+      </a>
+      <nav class="nav" aria-label="主导航">
+        <a href="#ingredients" class="is-primary">按食材配菜</a>
+        <a href="#chat">对话点菜</a>
+        <a href="#blindbox">今晚盲盒</a>
+        <a href="#capability">能力说明</a>
+      </nav>
+      <a href="#ingredients" class="btn btn-primary">开始配菜</a>
+      <button class="mobile-menu" id="mobile-menu-btn" aria-expanded="false" aria-controls="mobile-nav" aria-label="打开导航菜单">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/>
+        </svg>
+      </button>
+    </div>
+    <nav class="mobile-nav" id="mobile-nav" aria-label="移动端导航">
+      <a href="#ingredients" class="is-primary">按食材配菜</a>
+      <a href="#chat">对话点菜</a>
+      <a href="#blindbox">今晚盲盒</a>
+      <a href="#capability">能力说明</a>
+      <a href="#ingredients" class="btn btn-primary">开始配菜</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero">
+      <div class="container hero-inner">
+        <div class="hero-text">
+          <div class="badge"><span class="badge-dot" aria-hidden="true"></span>内测版 · 17 道一人食菜谱</div>
+          <h1>冰箱里有什么，<br><span class="accent">今晚就吃什么</span></h1>
+          <p class="hero-desc">勾一勾现有食材、选好忌口和锅具，30 秒拿到带精确一人份用量、调料、锅具和分步做法的菜谱——会告诉你用掉了什么、剩了什么，剩下的还能再配一道。</p>
+          <div class="hero-actions">
+            <a href="#ingredients" class="btn btn-primary">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                <rect x="3" y="7" width="12" height="8" rx="2" stroke="#fff" stroke-width="1.8"/>
+                <path d="M3 9h12M9 7v3" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+              按食材配菜
+            </a>
+            <a href="#chat" class="btn btn-secondary">和它聊聊今晚吃什么</a>
+          </div>
+          <p class="hero-note">不想思考？也可以直接开「今晚盲盒」。</p>
+          <div class="hero-stats">
+            <span class="hero-stat"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 3h12v14H4z" stroke="currentColor" stroke-width="1.8"/><path d="M4 7h12M7 10v3M10 10v4M13 10v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>按食材配菜</span>
+            <span class="hero-stat"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3v14M5 6l5-3 5 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>用量标到克</span>
+            <span class="hero-stat"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10a6 6 0 0 1 10-4.5M16 10a6 6 0 0 1-10 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M14 3v3h-3M6 17v-3h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>剩余食材再配一道</span>
+            <span class="hero-stat"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.8"/><path d="M10 6v4.5l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>忌口与锅具可筛选</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 主路径：食材配菜 -->
+    <section class="section" id="ingredients">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow">主路径</span>
+          <h2>冰箱里有什么，就吃什么</h2>
+          <p>填条件 → 勾食材 → 看结果里用掉了什么、剩了什么 → 点「开始做」</p>
+        </div>
+
+        <div class="panel">
+          <div class="prefs">
+            <div class="prefs-title">
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 6h12M6 10h8M8 14h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              先看条件（选填，用来过滤菜谱）
+            </div>
+            <div class="pref-row">
+              <span class="pref-label">忌口</span>
+              <div class="pref-chips" id="pref-avoid"></div>
+            </div>
+            <div class="pref-row">
+              <span class="pref-label">锅具</span>
+              <div class="pref-chips" id="pref-tools"></div>
+            </div>
+            <div class="pref-row">
+              <span class="pref-label">时间</span>
+              <div class="pref-chips" id="pref-time"></div>
+            </div>
+          </div>
+
+          <div class="ing-label">
+            <span>再勾食材（可多选，也可以自己补充）</span>
+            <span class="selected-count" id="selected-count">已选 0 样</span>
+          </div>
+
+          <div id="ing-groups"></div>
+          <button class="ing-more" id="ing-more" aria-expanded="false">展开全部食材</button>
+
+          <div class="custom-row">
+            <label for="custom-ing-input">其他食材</label>
+            <input type="text" class="custom-input" id="custom-ing-input" placeholder="比如：茄子、蘑菇、剩菜" maxlength="12" autocomplete="off">
+            <button class="btn btn-secondary" id="add-custom-ing" type="button" style="padding:9px 18px;">添加</button>
+          </div>
+          <div class="custom-chips" id="custom-chips"></div>
+
+          <div class="ing-actions">
+            <button class="btn btn-primary" id="generate-menu" type="button">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M8 2v3M8 11v3M2 8h3M11 8h3" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
+                <circle cx="8" cy="8" r="1.8" fill="#fff"/>
+              </svg>
+              生成今晚菜单
+            </button>
+            <button class="btn btn-secondary" id="reset-ingredients" type="button">清空重选</button>
+            <span class="ing-hint" id="ingredient-hint">选得越多，配得越准</span>
+          </div>
+
+          <div class="result-wrap" id="ingredient-result" aria-live="polite">
+            <div class="result-banner" id="result-banner" hidden><span class="dot" aria-hidden="true"></span><span id="result-banner-text"></span></div>
+            <div id="usage-box"></div>
+            <div id="result-card"></div>
+            <div style="margin-top:14px;">
+              <button class="btn btn-secondary" id="next-recipe" type="button" hidden>不喜欢？换一道</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="mine" id="mine">
+          <h3>我的收藏 · 最近做过</h3>
+          <p class="mine-sub">只存在这台设备上，不用注册。点一下就能重新打开这道菜。</p>
+          <div class="mine-chips" id="mine-chips"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 对话点菜 -->
+    <section class="section alt" id="chat">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow">辅助入口</span>
+          <h2>像和懂吃的朋友聊天一样点菜</h2>
+          <p>不想勾选就直接说，它会从菜谱库里挑一道给你</p>
+        </div>
+
+        <div class="notice" id="capability">
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.8"/><path d="M10 6v.5M10 9v5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <div>
+            基于 <b>17 道菜谱匹配</b>，不是实时 AI
+            <details>
+              <summary>详细说明</summary>
+              <p>回复来自人工整理好的 17 道菜谱的关键词匹配，不是大模型实时生成。目前支持四类输入：说食材（如「冰箱里有鸡蛋和黄瓜」）、说口味（辣 / 清淡 / 热乎 / 快手）、说忌口（如「没有番茄」）、随便推荐。超出这个范围的问题，它会老实说不知道。</p>
+            </details>
+          </div>
+        </div>
+
+        <div class="chat-window">
+          <div class="chat-head">
+            <div class="avatar" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                <path d="M7 6c0-1.4 1-1.4 1-2.8M11 6c0-1.4 1-1.4 1-2.8M15 6c0-1.4 1-1.4 1-2.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                <path d="M2.5 10h17a8.5 7.5 0 0 1-17 0Z" fill="currentColor"/>
+              </svg>
+            </div>
+            <div class="chat-head-info">
+              <h3>食光小厨</h3>
+              <p>基于 17 道菜谱匹配，不是实时 AI</p>
+            </div>
+          </div>
+          <div class="chat-body" id="demo-body" aria-live="polite"></div>
+          <div class="chat-input-bar">
+            <label for="demo-input" class="skip-link">输入你今晚想吃的东西</label>
+            <input class="chat-input" id="demo-input" placeholder="比如：冰箱里有鸡蛋和黄瓜" autocomplete="off">
+            <button class="send-btn" id="demo-send" aria-label="发送">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                <path d="M2 9h11M9 4.5 13.5 9 9 13.5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="quick-topics">
+          <p>试试这样问：</p>
+          <div class="chips" id="chips">
+            <button class="chip" type="button" data-topic="冰箱只剩泡面">冰箱只剩泡面</button>
+            <button class="chip" type="button" data-topic="想吃辣的">想吃辣的</button>
+            <button class="chip" type="button" data-topic="减脂期也能吃">减脂期也能吃</button>
+            <button class="chip" type="button" data-topic="深夜十一点">深夜十一点</button>
+            <button class="chip" type="button" data-topic="随便推荐一个">随便推荐一个</button>
+            <button class="chip" type="button" data-topic="一周不重样">一周不重样</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 今晚盲盒 -->
+    <section class="section" id="blindbox">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow">辅助入口</span>
+          <h2>选择困难？开个今晚盲盒</h2>
+          <p>可以先选条件，它会优先用你刚才勾过的食材</p>
+        </div>
+
+        <div class="blind-stage" id="blindbox-stage">
+          <div class="blind-conds" id="blind-conds" role="group" aria-label="盲盒条件"></div>
+          <div class="box-wrap" id="box-wrap">
+            <div class="box-glow" aria-hidden="true"></div>
+            <svg class="box-art" viewBox="0 0 160 160" fill="none" aria-hidden="true">
+              <rect x="28" y="62" width="104" height="76" rx="10" fill="#FF5A5F"/>
+              <rect x="24" y="44" width="112" height="26" rx="9" fill="#E8484E"/>
+              <rect x="72" y="44" width="16" height="94" fill="#F2A93B"/>
+              <circle cx="80" cy="70" r="11" fill="#FDF3E3"/>
+              <path d="M80 59c6 4 6 12 0 22-6-10-6-18 0-22Z" fill="#E89B2D"/>
+            </svg>
+          </div>
+          <p class="box-status" id="box-status">盒子里装着 11 道一人食惊喜</p>
+          <button class="btn btn-primary" id="open-box" type="button" style="font-size:16px;padding:14px 32px;">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+              <rect x="3" y="7" width="12" height="8" rx="2" stroke="#fff" stroke-width="1.8"/>
+              <path d="M3 9h12M9 7v3" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            开今晚盲盒
+          </button>
+          <div class="blind-result" id="blindbox-result" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt">
+      <div class="container">
+        <div class="section-head">
+          <h2>为什么一个人也要用它</h2>
+          <p>三个小坚持，让每一顿都不将就</p>
+        </div>
+        <div class="cards">
+          <div class="card">
+            <div class="icon-bg coral" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M6 3h12v18H6z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M6 10h12" stroke="currentColor" stroke-width="2"/><path d="M10 6v1.5M10 14v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </div>
+            <h3>按冰箱点菜</h3>
+            <p>报出存货就开配菜，结果里明确列出用掉和剩下的食材，剩下的还能再配一道。</p>
+          </div>
+          <div class="card">
+            <div class="icon-bg honey" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M12 7.5V12l3 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <h3>一人份精准用量</h3>
+            <p>每道菜都标到克，并注明熟重 / 生重 / 净重；忌口、锅具、时间都能提前筛。</p>
+          </div>
+          <div class="card">
+            <div class="icon-bg green" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5 19C5 10 11 5 20 4c0 9-4 15-13 15" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M5 19c3-6 7-9 11-11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </div>
+            <h3>开始做就能跟下来</h3>
+            <p>每一步是可勾选的按钮，做完打勾会播报进度，走神了回来也知道做到哪。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div class="container">
+        <h2>今晚，先看看冰箱里有什么</h2>
+        <p>17 道内测菜谱，全部标注一人份用量与做法，不用注册，直接可用。</p>
+        <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;">
+          <a href="#ingredients" class="btn btn-primary" style="font-size:16px;padding:14px 30px;">按食材配菜</a>
+          <a href="#blindbox" class="btn btn-secondary" style="font-size:16px;padding:14px 30px;">开个盲盒</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="mobile-bar" id="mobile-bar" aria-hidden="true">
+    <span class="mb-info">已选 <b id="mb-count">0</b> 样</span>
+    <button class="btn btn-primary" id="mb-generate" type="button">生成今晚菜单</button>
+  </div>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <a href="#main" class="logo">
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+              <path d="M9 9c0-1.8 1.3-1.8 1.3-3.6M14 9c0-1.8 1.3-1.8 1.3-3.6M19 9c0-1.8 1.3-1.8 1.3-3.6" stroke="#F2A93B" stroke-width="2" stroke-linecap="round"/>
+              <path d="M3.5 13h21a10.5 9.5 0 0 1-21 0Z" fill="#FF5A5F"/>
+            </svg>
+            一人食光
+          </a>
+          <p>内测版 · 收录 17 道一人食菜谱，均标注一人份用量、调料与锅具。菜谱由人工整理，回复来自菜谱库匹配，不是大模型实时生成。</p>
+        </div>
+        <div class="footer-col">
+          <h4>开始用</h4>
+          <a href="#ingredients">按食材配菜</a>
+          <a href="#chat">对话点菜</a>
+          <a href="#blindbox">今晚盲盒</a>
+        </div>
+        <div class="footer-col">
+          <h4>关于</h4>
+          <a href="#capability">能力说明</a>
+          <a href="#main">回到顶部</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>2026 · 一人食光 · 一个人，也要好好吃饭</span>
+        <span>内测版 · 基于 17 道菜谱匹配，不是实时 AI</span>
+      </div>
+      <details class="local-stats">
+        <summary>本机使用统计（仅保存在你的浏览器，不会上传）</summary>
+        <ul id="stats-list"></ul>
+      </details>
+    </div>
+  </footer>
+
+  <script>
+    /* ==================== 菜谱数据 ==================== */
+    const DISHES = [
+      {
+        id: 'fanqie', title: '番茄滑蛋青菜盖饭', img: 'assets/dish.png', minutes: 15, spicy: false, toolKeys: ['炒锅'],
+        tags: ['15 分钟', '一人份', '清淡暖胃'],
+        desc: '酸甜番茄汤底，滑蛋裹着热饭，热乎下肚',
+        needs: ['西红柿', '鸡蛋'],
+        amounts: ['米饭 150g（熟重）', '西红柿 1 个（约 150g 净重）', '鸡蛋 2 个（约 100g 去壳）', '小青菜 100g（净重）'],
+        seasoning: '盐 2g · 糖 3g · 生抽 5ml · 食用油 10ml',
+        tools: '炒锅（不粘更好）+ 电饭煲或用剩饭',
+        steps: ['番茄切块，中火炒 2 分钟至出汁，加半碗水煮开', '淋入打散的蛋液，静置 5 秒再轻轻推散', '放青菜烫 30 秒，加盐和糖调味', '浇在热米饭上，撒葱花开吃'],
+        subs: { '西红柿': '番茄酱 2 勺 + 清水 50ml', '青菜': '菠菜 / 生菜 / 娃娃菜', '鸡蛋': '嫩豆腐半盒（素食版）' }
+      },
+      {
+        id: 'huanggua', title: '黄瓜炒鸡蛋盖饭', img: 'assets/huanggua.png', minutes: 12, spicy: false, toolKeys: ['炒锅'],
+        tags: ['12 分钟', '一人份', '清爽开胃'],
+        desc: '黄瓜脆嫩、鸡蛋鲜香，配热米饭刚好不油不腻',
+        needs: ['黄瓜', '鸡蛋'],
+        amounts: ['米饭 150g（熟重）', '黄瓜 1 根（约 200g 净重）', '鸡蛋 2 个（约 100g 去壳）', '蒜 1 瓣（约 5g）'],
+        seasoning: '盐 2g · 生抽 5ml · 食用油 10ml',
+        tools: '炒锅（不粘更好）',
+        steps: ['黄瓜斜切片，鸡蛋打散加一小撮盐', '热油炒蛋至凝固盛出', '蒜末爆香，下黄瓜大火翻炒 1 分钟至微软', '倒回鸡蛋，加盐和生抽炒匀，盖在米饭上'],
+        subs: { '黄瓜': '西葫芦 / 青椒 / 莴笋', '鸡蛋': '鸡胸肉丝 80g' }
+      },
+      {
+        id: 'lajiao', title: '辣椒小炒肉盖饭', img: 'assets/lajiao.png', minutes: 12, spicy: true, toolKeys: ['炒锅'],
+        tags: ['12 分钟', '香辣下饭', '一人份'],
+        desc: '五花肉煸得微焦，辣椒炒出香气，配热米饭一绝',
+        needs: ['猪肉', '辣椒'],
+        amounts: ['米饭 150g（熟重）', '五花肉 100g（生重，切薄片）', '螺丝椒 2 个（约 120g 净重）', '蒜 2 瓣（约 10g）'],
+        seasoning: '生抽 10ml · 蚝油 5g · 盐 1g · 豆豉 5g（可选）',
+        tools: '炒锅（铁锅更香）',
+        steps: ['五花肉片下锅，中小火煸出油至微焦，盛出', '锅留底油，蒜末爆香，下螺丝椒炒出虎皮', '肉片回锅，加生抽、蚝油、豆豉大火炒匀', '盖在热米饭上，趁锅气最足时吃'],
+        subs: { '猪肉': '梅花肉 / 鸡腿肉 / 培根', '辣椒': '青尖椒 / 杭椒（辣度更低）' }
+      },
+      {
+        id: 'hongshaopaigu', title: '红烧排骨饭', img: null, minutes: 35, spicy: false, toolKeys: ['炒锅', '压力锅'],
+        tags: ['35 分钟', '酱香浓郁', '一人份'],
+        desc: '小块排骨慢炖入味，酱汁拌饭吃光一整碗',
+        needs: ['排骨'],
+        amounts: ['米饭 150g（熟重）', '猪肋排 300g（生重，约 5-6 块）', '姜 3 片（约 5g）', '八角 1 颗', '冰糖 10g'],
+        seasoning: '生抽 15ml · 老抽 5ml · 料酒 10ml · 盐 2g',
+        tools: '炒锅 + 炖锅（或电压力锅 20 分钟）',
+        steps: ['排骨冷水下锅焯 2 分钟，冲净血沫', '小火炒化冰糖至枣红色，下排骨翻炒上色', '加姜片、八角、生抽、老抽、料酒炒香', '加热水没过排骨，小火焖 25 分钟后大火收汁', '连汁浇在米饭上，撒葱花'],
+        subs: { '冰糖': '白糖 10g（颜色略浅）', '八角': '五香粉 1g', '排骨': '鸡翅中 4 只（时间缩短到 18 分钟）' }
+      },
+      {
+        id: 'shala', title: '柠檬鸡胸温沙拉', img: 'assets/salad.png', minutes: 20, spicy: false, toolKeys: ['平底锅', '汤锅'],
+        tags: ['20 分钟', '约 380 大卡', '高蛋白'],
+        desc: '嫩滑鸡胸肉搭配温热蔬菜，淋柠檬油醋汁',
+        needs: ['鸡胸肉'],
+        amounts: ['鸡胸肉 120g（生重）', '西兰花 80g（净重）', '小番茄 6 颗（约 100g）', '胡萝卜 50g（净重）', '柠檬 半个（约 40g）'],
+        seasoning: '橄榄油 5ml · 黑胡椒 1g · 盐 2g · 蜂蜜 3g',
+        tools: '平底锅 + 小汤锅',
+        steps: ['鸡胸横切成片，用盐、黑胡椒、柠檬汁腌 10 分钟', '西兰花、胡萝卜焯水 2 分钟，沥干', '平底锅少油，中火每面煎 3 分钟至微焦，静置 2 分钟再切', '全部装盘，淋橄榄油、柠檬汁和蜂蜜，撒黑胡椒'],
+        subs: { '鸡胸肉': '虾仁 120g / 老豆腐 200g', '西兰花': '芦笋 / 生菜 / 菠菜', '柠檬': '米醋 10ml + 少许糖' }
+      },
+      {
+        id: 'budae', title: '韩式部队锅（一人份）', img: 'assets/budae.png', minutes: 15, spicy: false, toolKeys: ['汤锅'],
+        tags: ['15 分钟', '一锅端', '浓郁暖胃'],
+        desc: '泡面吸满浓郁汤底，配午餐肉和芝士，深夜治愈',
+        needs: ['泡面'],
+        amounts: ['泡面 1 包（面饼约 100g）', '午餐肉 80g', '泡菜 80g（沥干）', '鸡蛋 1 个（约 50g 去壳）', '芝士片 1 片（约 18g）', '年糕 60g（可选）'],
+        seasoning: '泡面调料包 1 袋 · 韩式辣酱 10g（怕辣可减半）',
+        tools: '小汤锅（一人食锅最佳）',
+        steps: ['锅中少油，泡菜和午餐肉炒 1 分钟出香', '加水 400ml，放调料包和辣酱煮开', '下年糕和面饼煮 3 分钟', '打入鸡蛋、铺芝士片，盖盖焖 2 分钟', '关火撒葱花，连锅端上桌'],
+        subs: { '午餐肉': '火腿 / 培根 / 香肠', '芝士片': '马苏里拉碎 30g', '泡菜': '酸菜 80g（风味不同但开胃）' }
+      },
+      {
+        id: 'yangchun', title: '快手阳春面', img: 'assets/noodle.png', minutes: 5, spicy: false, toolKeys: ['汤锅'],
+        tags: ['5 分钟', '暖胃', '轻负担'],
+        desc: '清汤挂面配猪油香，简单却不敷衍',
+        needs: ['面条'],
+        amounts: ['细面 80g（干重）', '猪油 5g', '葱花 10g', '开水或高汤 400ml'],
+        seasoning: '生抽 10ml · 香油 3ml · 白胡椒粉 1g · 盐 1g',
+        tools: '煮面锅 + 大碗',
+        steps: ['碗里放生抽、香油、白胡椒粉、盐和猪油', '水开下面，按包装时间煮至断生', '先舀两勺面汤冲开碗底调料', '捞面入碗，连汤冲满，撒葱花趁热吃'],
+        subs: { '猪油': '香油 5ml 或橄榄油', '细面': '挂面 / 意面 / 粉丝', '葱花': '蒜酥 / 海苔碎' }
+      },
+      {
+        id: 'conghua', title: '香葱滑蛋盖饭', img: null, minutes: 8, spicy: false, toolKeys: ['平底锅'],
+        tags: ['8 分钟', '一人份', '嫩滑鲜香'],
+        desc: '鸡蛋半凝固状态最嫩，拌饭一绝',
+        needs: ['鸡蛋', '米饭'],
+        amounts: ['米饭 150g（熟重）', '鸡蛋 3 个（约 150g 去壳）', '牛奶 15ml', '小葱 1 根（约 10g）', '黄油 5g'],
+        seasoning: '盐 2g · 白胡椒 少许',
+        tools: '平底不粘锅',
+        steps: ['鸡蛋加牛奶和盐充分打散', '黄油小火融化，倒入蛋液', '边缘凝固就向中间推，反复 4-5 次', '半凝固时关火，盖在热饭上撒葱花'],
+        subs: { '牛奶': '清水 15ml', '黄油': '食用油 5ml', '小葱': '欧芹碎 / 海苔碎' }
+      },
+      {
+        id: 'niurou', title: '黑椒土豆牛肉饭', img: null, minutes: 25, spicy: false, toolKeys: ['炒锅'],
+        tags: ['25 分钟', '饱腹感强', '一人份'],
+        desc: '牛肉滑嫩、土豆绵糯，黑椒汁拌饭连吃两碗',
+        needs: ['牛肉', '土豆'],
+        amounts: ['米饭 150g（熟重）', '牛里脊 120g（生重）', '土豆 1 个（约 150g 净重）', '洋葱 半个（约 80g）'],
+        seasoning: '黑胡椒酱 20g · 生抽 10ml · 淀粉 5g · 盐 1g',
+        tools: '炒锅',
+        steps: ['牛肉切片，用生抽和淀粉抓匀腌 10 分钟', '土豆切块，少油煎至表面微黄', '加半碗水焖 8 分钟至土豆变软', '牛肉下锅滑炒变色，加黑椒酱炒匀，盖饭'],
+        subs: { '牛肉': '鸡腿肉 / 猪里脊', '土豆': '胡萝卜 / 藕 / 南瓜', '黑胡椒酱': '蚝油 10g + 黑胡椒碎 2g' }
+      },
+      {
+        id: 'doufu', title: '麻婆豆腐饭', img: null, minutes: 15, spicy: true, toolKeys: ['炒锅'],
+        tags: ['15 分钟', '麻辣下饭', '一人份'],
+        desc: '豆腐嫩滑入味，红油亮泽，一勺饭一勺豆腐',
+        needs: ['豆腐'],
+        amounts: ['米饭 150g（熟重）', '嫩豆腐 300g（净重）', '猪肉末 50g（生重）', '蒜苗 1 根（约 15g）'],
+        seasoning: '豆瓣酱 15g · 生抽 5ml · 花椒粉 2g · 淀粉水 15ml（淀粉 5g + 水 10ml）',
+        tools: '炒锅',
+        steps: ['豆腐切块，淡盐水焯 1 分钟去豆腥', '肉末炒散，加豆瓣酱小火炒出红油', '加半碗水煮开，轻推入豆腐，中火煮 3 分钟', '淋淀粉水收汁，撒花椒粉和蒜苗，盖饭'],
+        subs: { '猪肉末': '香菇碎 50g（素食版）', '嫩豆腐': '内酯豆腐 / 鸡蛋豆腐', '花椒粉': '花椒油几滴' }
+      },
+      {
+        id: 'paigu', title: '拍黄瓜拌饭', img: null, minutes: 5, spicy: false, toolKeys: ['无需开火'],
+        tags: ['5 分钟', '一人份', '清爽解腻'],
+        desc: '蒜香微辣，拍完直接拌，夏天也胃口大开',
+        needs: ['黄瓜'],
+        amounts: ['米饭 150g（熟重）', '黄瓜 2 根（约 400g 净重）', '蒜 3 瓣（约 15g）', '小米辣 1 个（可选，约 5g）'],
+        seasoning: '香醋 10ml · 生抽 10ml · 香油 5ml · 盐 2g',
+        tools: '菜刀 + 保鲜袋（全程不开火）',
+        steps: ['黄瓜装保鲜袋里拍裂，掰成小块', '加蒜末、小米辣圈', '加盐、生抽、香醋、香油拌匀', '静置 3 分钟入味，配热米饭吃'],
+        subs: { '黄瓜': '莴笋 / 白萝卜 / 娃娃菜', '香醋': '柠檬汁 10ml', '小米辣': '辣椒油几滴' }
+      },
+      {
+        id: 'fanqiechaodan', title: '番茄炒蛋盖饭', img: 'assets/dish.png', minutes: 12, spicy: false, toolKeys: ['炒锅'],
+        tags: ['12 分钟', '一人份', '酸甜暖胃'],
+        desc: '番茄出汁、鸡蛋吸味，每一口饭都有滋味',
+        needs: ['西红柿', '鸡蛋', '米饭'],
+        amounts: ['米饭 150g（熟重）', '西红柿 2 个（约 300g 净重）', '鸡蛋 2 个（约 100g 去壳）', '小葱 1 根（约 10g）'],
+        seasoning: '盐 2g · 糖 5g · 番茄酱 10g（可选） · 食用油 10ml',
+        tools: '炒锅（不粘更好）',
+        steps: ['鸡蛋炒熟盛出', '番茄块中火炒 3 分钟出汁，加少许水', '倒回鸡蛋翻匀，加盐、糖调味', '盖在米饭上撒葱花'],
+        subs: { '西红柿': '番茄罐头 200g', '糖': '代糖少许', '鸡蛋': '嫩豆腐块' }
+      },
+      {
+        id: 'zhaoshao', title: '照烧鸡腿饭', img: 'assets/zhaoshao.png', minutes: 20, spicy: false, toolKeys: ['平底锅'],
+        tags: ['20 分钟', '酱香浓郁', '一人份'],
+        desc: '外皮焦香、内里多汁，照烧汁拌饭根本停不下来',
+        needs: ['鸡腿', '米饭'],
+        amounts: ['米饭 150g（熟重）', '去骨鸡腿 1 只（约 180g 生重）', '西兰花 60g（净重）', '白芝麻 少许（约 2g）'],
+        seasoning: '酱油 15ml · 味淋 10ml · 料酒 10ml · 蜂蜜 5g',
+        tools: '平底锅',
+        steps: ['鸡腿用牙签扎孔，两面撒少许盐', '平底锅少油，鸡皮朝下中火煎 6 分钟至金黄', '翻面再煎 4 分钟，倒出多余油脂', '倒入照烧汁，中火收浓裹匀，取出切条', '西兰花同锅烫熟，铺饭撒芝麻'],
+        subs: { '鸡腿': '鸡胸肉 / 老豆腐片', '味淋': '米酒 10ml + 糖 3g', '西兰花': '芦笋 / 生菜' }
+      },
+      {
+        id: 'danbao', title: '芝士蛋包饭', img: 'assets/danbao.png', minutes: 18, spicy: false, toolKeys: ['平底锅'],
+        tags: ['18 分钟', '芝士拉丝', '治愈系'],
+        desc: '金黄蛋皮划开，里面是番茄炒饭，芝士一拉解千愁',
+        needs: ['鸡蛋', '米饭', '芝士'],
+        amounts: ['米饭 150g（熟重）', '鸡蛋 3 个（约 150g 去壳）', '番茄 1 个（约 150g 净重）', '芝士碎 30g', '洋葱 少许（约 20g）'],
+        seasoning: '番茄酱 20g · 盐 2g · 黄油 5g',
+        tools: '平底不粘锅',
+        steps: ['番茄和洋葱炒软，下米饭炒散，加番茄酱和盐调味，盛出', '蛋液打散，黄油小火融化后倒入，摊成圆蛋皮', '蛋皮半凝固时在一侧铺上炒饭', '对折包好，撒芝士碎，盖盖焖 30 秒至融化'],
+        subs: { '芝士碎': '芝士片 2 片撕碎', '番茄': '番茄酱 20g 直接拌饭', '黄油': '食用油 5ml' }
+      },
+      {
+        id: 'paocai', title: '韩式泡菜炒饭', img: 'assets/paocai.png', minutes: 12, spicy: true, toolKeys: ['炒锅'],
+        tags: ['12 分钟', '酸辣开胃', '清冰箱'],
+        desc: '泡菜的酸辣裹着米粒，配一颗溏心蛋刚刚好',
+        needs: ['泡菜', '米饭'],
+        amounts: ['米饭 150g（熟重，隔夜饭更佳）', '泡菜 100g（沥干）', '午餐肉 50g', '鸡蛋 1 个（约 50g 去壳）', '海苔碎 少许（约 2g）'],
+        seasoning: '韩式辣酱 10g · 生抽 5ml · 香油 3ml',
+        tools: '炒锅',
+        steps: ['泡菜切段，午餐肉切丁，中火炒 1 分钟出酸香', '下米饭压散翻炒 2 分钟', '加辣酱和生抽炒匀，关火淋香油', '另煎一个溏心蛋铺上，撒海苔碎'],
+        subs: { '泡菜': '酸豆角 80g / 雪菜 80g（不辣版）', '午餐肉': '培根 / 火腿 / 罐头金枪鱼', '韩式辣酱': '不吃辣可省，加少许糖提鲜' }
+      },
+      {
+        id: 'xiaren', title: '鲜虾豆腐汤', img: 'assets/xiaren.png', minutes: 15, spicy: false, toolKeys: ['汤锅'],
+        tags: ['15 分钟', '低脂清爽', '一碗管饱'],
+        desc: '虾的鲜味融进奶白汤底，豆腐嫩滑，暖到胃里',
+        needs: ['虾', '豆腐'],
+        amounts: ['鲜虾 8 只（约 150g 带壳）', '嫩豆腐 200g（净重）', '姜 2 片（约 4g）', '小葱 1 根（约 10g）'],
+        seasoning: '盐 3g · 白胡椒 1g · 香油 3ml · 料酒 5ml',
+        tools: '汤锅',
+        steps: ['虾去壳留虾头，虾身开背去虾线', '虾头下锅煎出红油，加姜片和料酒', '倒开水 500ml 煮 5 分钟，捞出虾头', '下豆腐块煮 3 分钟，再下虾仁煮 2 分钟', '加盐、白胡椒，淋香油撒葱花'],
+        subs: { '鲜虾': '虾仁 100g / 蛤蜊 200g', '嫩豆腐': '鸡蛋豆腐 / 内酯豆腐', '香油': '橄榄油几滴' }
+      },
+      {
+        id: 'jufan', title: '芝士焗饭', img: 'assets/jufan.png', minutes: 15, spicy: false, toolKeys: ['烤箱', '空气炸锅'],
+        tags: ['15 分钟', '芝士控', '零失败'],
+        desc: '剩饭的华丽转身，表面烤出金黄焦香的芝士壳',
+        needs: ['米饭', '芝士'],
+        amounts: ['剩饭 200g（熟重）', '马苏里拉芝士 60g', '玉米粒 30g（可选）', '火腿丁 30g（可选）'],
+        seasoning: '盐 2g · 黑胡椒 1g · 黄油 5g',
+        tools: '烤箱或空气炸锅 + 烤碗',
+        steps: ['剩饭拌入黄油、盐和黑胡椒，铺进烤碗', '撒火腿丁、玉米粒，铺满芝士碎', '烤箱 200℃ 烤 10 分钟（空气炸锅 180℃ 8 分钟）', '表面出现焦斑即可，小心烫'],
+        subs: { '马苏里拉': '芝士片 3 片撕碎', '火腿丁': '玉米粒 / 青豆 / 香菇丁', '黄油': '橄榄油 5ml' }
+      }
+    ];
+
+    function dishById(id) { return DISHES.find(d => d.id === id); }
+
+    /* ==================== 本地存储：统计 / 收藏 / 最近 ==================== */
+    const STATS_KEY = 'yirenshiguang_stats_v2';
+    const defaultStats = { ing: 0, chat: 0, blind: 0, up: 0, down: 0, cook: 0, favs: [], recent: [] };
+    function loadStats() {
+      try { return Object.assign({}, defaultStats, JSON.parse(localStorage.getItem(STATS_KEY) || '{}')); }
+      catch (e) { return Object.assign({}, defaultStats); }
+    }
+    let stats = loadStats();
+    function saveStats() { try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch (e) {} renderStats(); renderMine(); }
+    function bump(key) { stats[key] = (stats[key] || 0) + 1; saveStats(); }
+    function isFav(id) { return stats.favs.includes(id); }
+    function toggleFav(id) {
+      stats.favs = isFav(id) ? stats.favs.filter(x => x !== id) : stats.favs.concat([id]);
+      saveStats();
+    }
+    function recordRecent(id) {
+      stats.recent = [id].concat(stats.recent.filter(x => x !== id)).slice(0, 8);
+      saveStats();
+    }
+    function renderStats() {
+      const el = document.getElementById('stats-list');
+      if (!el) return;
+      el.innerHTML =
+        `<li>按食材配菜：${stats.ing} 次</li><li>对话点菜：${stats.chat} 次</li>` +
+        `<li>今晚盲盒：${stats.blind} 次</li><li>进入烹饪模式：${stats.cook} 次</li>` +
+        `<li>反馈：满意 ${stats.up} 次 / 不满意 ${stats.down} 次</li>` +
+        `<li>收藏：${stats.favs.length} 道</li>`;
+    }
+
+    /* ==================== 统一菜谱卡 ==================== */
+    function buildRecipeCard(dish, opts) {
+      opts = opts || {};
+      const head = dish.img
+        ? `<div class="rc-head"><img src="${dish.img}" alt="${dish.title}" class="rc-img"><div class="rc-info">
+             <h4 class="rc-title">${dish.title}</h4>
+             <div class="tags">${dish.tags.map((t, i) => `<span class="tag ${i === 0 ? 'coral' : i === 1 ? 'honey' : 'green'}">${t}</span>`).join('')}</div>
+             <p class="rc-desc">${dish.desc}</p></div></div>`
+        : `<div class="rc-head"><div class="rc-info">
+             <h4 class="rc-title">${dish.title}</h4>
+             <div class="tags">${dish.tags.map((t, i) => `<span class="tag ${i === 0 ? 'coral' : i === 1 ? 'honey' : 'green'}">${t}</span>`).join('')}</div>
+             <p class="rc-desc">${dish.desc}</p></div></div>`;
+      const subKeys = Object.keys(dish.subs || {});
+      const subsHtml = subKeys.length
+        ? `<div class="rc-subs"><b>缺料也能做：</b>${subKeys.map(k => `${k} → ${dish.subs[k]}`).join('；')}</div>` : '';
+      return `
+        <div class="recipe-card" data-dish-id="${dish.id}">
+          ${head}
+          <div class="rc-grid">
+            <div class="rc-block">
+              <h5>一人份用量</h5>
+              <ul class="rc-amounts">${dish.amounts.map(a => `<li>${a}</li>`).join('')}</ul>
+            </div>
+            <div class="rc-block">
+              <h5>调料</h5><p class="rc-line">${dish.seasoning}</p>
+              <h5>锅具 · 约 ${dish.minutes} 分钟</h5><p class="rc-line">${dish.tools}</p>
+            </div>
+          </div>
+          ${subsHtml}
+          <div class="rc-block">
+            <h5>做法 <span class="cook-progress" hidden></span></h5>
+            <ol class="rc-steps">
+              ${dish.steps.map((s, i) => `
+                <li><button class="step-btn" type="button" aria-pressed="false" data-step="${i}">
+                  <span class="step-box" aria-hidden="true">✓</span>
+                  <span class="step-text">${s}</span>
+                </button></li>`).join('')}
+            </ol>
+            <p class="rc-fb" aria-live="polite"></p>
+          </div>
+          <div class="rc-actions">
+            <button class="btn btn-primary" type="button" data-action="cook">开始做</button>
+            <button class="btn btn-secondary" type="button" data-action="fav">${isFav(dish.id) ? '已收藏' : '收藏'}</button>
+            <button class="btn btn-ghost" type="button" data-action="up">满意</button>
+            <button class="btn btn-ghost" type="button" data-action="down">不满意</button>
+          </div>
+          ${opts.foot ? `<p class="rc-line" style="margin-top:12px;color:var(--text-4);font-size:12px;">${opts.foot}</p>` : ''}
+        </div>`;
+    }
+
+    /* 步骤勾选 + 动作按钮 */
+    document.addEventListener('click', (e) => {
+      const stepBtn = e.target.closest('.step-btn');
+      if (stepBtn) {
+        const card = stepBtn.closest('.recipe-card');
+        const done = stepBtn.getAttribute('aria-pressed') === 'true';
+        stepBtn.setAttribute('aria-pressed', done ? 'false' : 'true');
+        card.classList.add('cooking');
+        updateProgress(card);
+        return;
+      }
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      const card = btn.closest('.recipe-card');
+      if (!card) return;
+      const id = card.dataset.dishId;
+      const action = btn.dataset.action;
+      const fb = card.querySelector('.rc-fb');
+
+      if (action === 'cook') {
+        const cooking = card.classList.toggle('cooking');
+        btn.textContent = cooking ? '退出烹饪模式' : '开始做';
+        const progress = card.querySelector('.cook-progress');
+        if (cooking) { bump('cook'); if (progress) progress.hidden = false; updateProgress(card, true); }
+        else {
+          card.querySelectorAll('.step-btn').forEach(b => b.setAttribute('aria-pressed', 'false'));
+          if (progress) progress.hidden = true;
+          fb.textContent = '';
+        }
+        return;
+      }
+      if (action === 'fav') {
+        toggleFav(id);
+        btn.textContent = isFav(id) ? '已收藏' : '收藏';
+        fb.textContent = isFav(id) ? '已收藏，可在下方「我的收藏 · 最近做过」里直接打开。' : '已取消收藏。';
+        return;
+      }
+      if (action === 'up' || action === 'down') {
+        bump(action);
+        fb.textContent = action === 'up' ? '收到，会优先推荐这类菜。' : '收到，记下了。点「换一道」或告诉我忌口，我再换。';
+      }
+    });
+
+    function updateProgress(card, silent) {
+      const steps = card.querySelectorAll('.step-btn');
+      const done = card.querySelectorAll('.step-btn[aria-pressed="true"]').length;
+      const p = card.querySelector('.cook-progress');
+      const fb = card.querySelector('.rc-fb');
+      if (p) p.textContent = `已完成 ${done}/${steps.length} 步`;
+      if (silent) return;
+      if (done === steps.length && steps.length > 0) fb.textContent = `全部 ${steps.length} 步完成，开饭！`;
+      else fb.textContent = `已完成第 ${done} 步，共 ${steps.length} 步。`;
+    }
+
+    /* ==================== 条件筛选 ==================== */
+    const AVOID_OPTIONS = [
+      { label: '不吃辣', key: '辣' },
+      { label: '海鲜', key: '海鲜' },
+      { label: '牛肉', key: '牛肉' },
+      { label: '猪肉', key: '猪肉' },
+      { label: '豆制品', key: '豆腐' }
+    ];
+    const TOOL_OPTIONS = [
+      { label: '炒锅', keys: ['炒锅'] },
+      { label: '平底锅', keys: ['平底锅'] },
+      { label: '汤锅', keys: ['汤锅'] },
+      { label: '烤箱/空气炸锅', keys: ['烤箱', '空气炸锅'] },
+      { label: '不开火', keys: ['无需开火'] }
+    ];
+    const TIME_OPTIONS = [
+      { label: '10 分钟内', value: 10 },
+      { label: '20 分钟内', value: 20 },
+      { label: '不限', value: null }
+    ];
+
+    const prefs = { avoid: new Set(), tools: new Set(), maxTime: null };
+
+    function renderPrefs() {
+      const avoidBox = document.getElementById('pref-avoid');
+      AVOID_OPTIONS.forEach(opt => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'pref-chip'; b.textContent = opt.label;
+        b.setAttribute('aria-pressed', 'false');
+        b.addEventListener('click', () => {
+          const on = b.getAttribute('aria-pressed') === 'true';
+          b.setAttribute('aria-pressed', on ? 'false' : 'true');
+          if (on) prefs.avoid.delete(opt.key); else prefs.avoid.add(opt.key);
+        });
+        avoidBox.appendChild(b);
+      });
+      const toolBox = document.getElementById('pref-tools');
+      TOOL_OPTIONS.forEach(opt => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'pref-chip'; b.textContent = opt.label;
+        b.setAttribute('aria-pressed', 'false');
+        b.addEventListener('click', () => {
+          const on = b.getAttribute('aria-pressed') === 'true';
+          b.setAttribute('aria-pressed', on ? 'false' : 'true');
+          opt.keys.forEach(k => { if (on) prefs.tools.delete(k); else prefs.tools.add(k); });
+        });
+        toolBox.appendChild(b);
+      });
+      const timeBox = document.getElementById('pref-time');
+      TIME_OPTIONS.forEach((opt, idx) => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'pref-chip'; b.textContent = opt.label;
+        b.setAttribute('aria-pressed', idx === TIME_OPTIONS.length - 1 ? 'true' : 'false');
+        b.addEventListener('click', () => {
+          timeBox.querySelectorAll('.pref-chip').forEach(c => c.setAttribute('aria-pressed', 'false'));
+          b.setAttribute('aria-pressed', 'true');
+          prefs.maxTime = opt.value;
+        });
+        timeBox.appendChild(b);
+      });
+    }
+    renderPrefs();
+
+    function dishPasses(d) {
+      if (d.id === 'generic') return true;
+      if (prefs.avoid.has('辣') && d.spicy) return false;
+      const text = d.amounts.join(' ') + ' ' + d.needs.join(' ') + ' ' + d.seasoning + ' ' + d.title;
+      for (const a of prefs.avoid) {
+        if (a === '辣') continue;
+        if (a === '海鲜' && /虾|蛤蜊|海鲜/.test(text)) return false;
+        if (text.includes(a)) return false;
+      }
+      if (prefs.tools.size && !(d.toolKeys || []).some(t => prefs.tools.has(t))) return false;
+      if (prefs.maxTime && d.minutes > prefs.maxTime) return false;
+      return true;
+    }
+
+    /* ==================== 食材配菜 ==================== */
+    const INGREDIENT_GROUPS = [
+      { name: '主食', items: ['米饭', '剩饭', '面条', '泡面', '年糕'] },
+      { name: '蛋白质', items: ['鸡蛋', '鸡胸肉', '鸡腿', '猪肉', '排骨', '牛肉', '培根', '香肠', '虾', '豆腐'] },
+      { name: '蔬菜菌菇', items: ['西红柿', '黄瓜', '青菜', '土豆', '胡萝卜', '洋葱', '辣椒', '玉米', '蘑菇', '茄子', '西葫芦'] },
+      { name: '常备', items: ['芝士', '泡菜', '午餐肉'] }
+    ];
+    const SYNONYMS = {
+      '西红柿': ['番茄'], '番茄': ['西红柿'],
+      '青菜': ['小白菜'], '小白菜': ['青菜'],
+      '面条': ['挂面'], '挂面': ['面条'],
+      '米饭': ['剩饭'], '剩饭': ['米饭']
+    };
+
+    const ingGroups = document.getElementById('ing-groups');
+    const selectedCount = document.getElementById('selected-count');
+    const ingHint = document.getElementById('ingredient-hint');
+    const generateBtn = document.getElementById('generate-menu');
+    const resetBtn = document.getElementById('reset-ingredients');
+    const resultBanner = document.getElementById('result-banner');
+    const resultBannerText = document.getElementById('result-banner-text');
+    const usageBox = document.getElementById('usage-box');
+    const resultCard = document.getElementById('result-card');
+    const nextRecipeBtn = document.getElementById('next-recipe');
+    const customInput = document.getElementById('custom-ing-input');
+    const customChips = document.getElementById('custom-chips');
+    const ingMoreBtn = document.getElementById('ing-more');
+    const mobileBar = document.getElementById('mobile-bar');
+    const mbCount = document.getElementById('mb-count');
+
+    const selected = new Set();
+    let rankedMatches = [];
+    let matchIndex = 0;
+    let currentDish = null;
+
+    INGREDIENT_GROUPS.forEach(group => {
+      const wrap = document.createElement('div');
+      wrap.className = 'ing-group';
+      const title = document.createElement('div');
+      title.className = 'ing-group-title';
+      title.textContent = group.name;
+      wrap.appendChild(title);
+      const chips = document.createElement('div');
+      chips.className = 'ing-chips';
+      group.items.forEach((name, idx) => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'ing-chip' + (idx >= 5 ? ' extra' : '');
+        chip.textContent = name;
+        chip.setAttribute('aria-pressed', 'false');
+        chip.addEventListener('click', () => {
+          const on = chip.getAttribute('aria-pressed') === 'true';
+          chip.setAttribute('aria-pressed', on ? 'false' : 'true');
+          if (on) selected.delete(name); else selected.add(name);
+          updateHint();
+        });
+        chips.appendChild(chip);
+      });
+      wrap.appendChild(chips);
+      ingGroups.appendChild(wrap);
+    });
+
+    ingMoreBtn.addEventListener('click', () => {
+      const expanded = ingMoreBtn.getAttribute('aria-expanded') === 'true';
+      ingMoreBtn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+      ingGroups.querySelectorAll('.ing-chips').forEach(c => c.classList.toggle('show-extra', !expanded));
+      ingMoreBtn.textContent = expanded ? '展开全部食材' : '收起部分食材';
+    });
+
+    function updateHint() {
+      selectedCount.textContent = `已选 ${selected.size} 样`;
+      mbCount.textContent = String(selected.size);
+      mobileBar.classList.toggle('show', selected.size > 0);
+      mobileBar.setAttribute('aria-hidden', selected.size > 0 ? 'false' : 'true');
+      document.body.classList.toggle('has-bar', selected.size > 0);
+      ingHint.classList.remove('warn');
+      ingHint.textContent = selected.size === 0 ? '选得越多，配得越准' : '选好了就点「生成今晚菜单」';
+    }
+
+    function hasIngredient(name) {
+      if (selected.has(name)) return true;
+      return (SYNONYMS[name] || []).some(s => selected.has(s));
+    }
+    function missingOf(dish) { return dish.needs.filter(n => !hasIngredient(n)); }
+
+    function createCustomChip(name) {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'custom-chip';
+      chip.innerHTML = `${name}<span class="remove" aria-label="移除 ${name}">×</span>`;
+      chip.addEventListener('click', (e) => {
+        if (e.target.classList.contains('remove')) {
+          selected.delete(name); chip.remove(); updateHint();
+        }
+      });
+      return chip;
+    }
+
+    function addCustomIngredient(raw) {
+      const name = raw.trim().replace(/[\s,，]+/g, '');
+      if (!name) return;
+      if (selected.has(name)) {
+        ingHint.textContent = '这个食材已经在清单里了';
+        ingHint.classList.add('warn');
+        setTimeout(updateHint, 1600);
+        return;
+      }
+      const preset = Array.from(ingGroups.querySelectorAll('.ing-chip')).find(c => c.textContent === name);
+      if (preset) { preset.setAttribute('aria-pressed', 'true'); selected.add(name); updateHint(); customInput.value = ''; return; }
+      selected.add(name);
+      customChips.appendChild(createCustomChip(name));
+      updateHint();
+      customInput.value = '';
+    }
+
+    document.getElementById('add-custom-ing').addEventListener('click', () => addCustomIngredient(customInput.value));
+    customInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') addCustomIngredient(customInput.value); });
+
+    resetBtn.addEventListener('click', () => {
+      selected.clear();
+      ingGroups.querySelectorAll('.ing-chip').forEach(c => c.setAttribute('aria-pressed', 'false'));
+      customChips.innerHTML = '';
+      updateHint();
+      resultBanner.hidden = true;
+      usageBox.innerHTML = '';
+      resultCard.innerHTML = '';
+      nextRecipeBtn.hidden = true;
+    });
+
+    function buildGenericDish(ings) {
+      const list = ings && ings.length ? ings : Array.from(selected);
+      const hasRice = list.includes('米饭') || list.includes('剩饭');
+      const hasNoodle = list.includes('面条') || list.includes('挂面');
+      const hasEgg = list.includes('鸡蛋');
+      const hasTofu = list.includes('豆腐');
+      const main = hasRice ? '炒饭' : hasNoodle ? '炒面' : hasEgg ? '炒蛋' : hasTofu ? '烩豆腐' : '一锅炒';
+      return {
+        id: 'generic',
+        title: `${list.slice(0, 3).join('')} ${main}`,
+        img: null, minutes: 10, spicy: false, toolKeys: ['炒锅'],
+        tags: ['自由发挥', '不浪费', '10 分钟'],
+        desc: `冰箱里现成的 ${list.join('、')}，不用额外采购，凑一凑就是一顿。`,
+        amounts: list.map(i => `${i} 约 100-150g（一人份）`),
+        seasoning: '盐 2g · 生抽 10ml · 食用油 10ml · 蒜末少许',
+        tools: '炒锅（一锅到底）',
+        steps: [
+          `把 ${list.join('、')} 洗净切好，难熟的切小一点`,
+          '热锅少油，蒜末爆香，按耐炒程度依次下锅',
+          '中火翻炒 3-5 分钟至断生',
+          '加盐和生抽调味，出锅装盘'
+        ],
+        subs: {}
+      };
+    }
+
+    function rankRecipes() {
+      const pool = DISHES.filter(dishPasses);
+      const full = pool.filter(d => d.needs.length > 0 && missingOf(d).length === 0)
+        .sort((a, b) => b.needs.length - a.needs.length);
+      if (full.length) return { list: full, best: full[0], miss: [], blocked: pool.length === 0 };
+
+      const candidates = [{ dish: buildGenericDish(), score: selected.size, miss: [] }];
+      pool.forEach(d => {
+        if (d.needs.length === 0) return;
+        const miss = missingOf(d);
+        const overlap = d.needs.length - miss.length;
+        if (overlap > 0 && miss.length <= 2) candidates.push({ dish: d, score: overlap - miss.length * 2, miss });
+      });
+      candidates.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return (a.dish.id === 'generic' ? 1 : 0) - (b.dish.id === 'generic' ? 1 : 0);
+      });
+      return { list: [], best: candidates[0].dish, miss: candidates[0].miss, blocked: pool.length === 0 };
+    }
+
+    function computeUsage(dish) {
+      const sel = Array.from(selected);
+      const text = dish.amounts.join(' ') + ' ' + dish.needs.join(' ') + ' ' + dish.seasoning + ' ' + dish.title;
+      const used = sel.filter(i => text.includes(i) || (SYNONYMS[i] || []).some(s => text.includes(s)));
+      const unused = sel.filter(i => !used.includes(i));
+      return { used, unused };
+    }
+
+    function renderUsage(dish) {
+      if (dish.id === 'generic' || selected.size === 0) { usageBox.innerHTML = ''; return; }
+      const { used, unused } = computeUsage(dish);
+      let html = '';
+      if (used.length) {
+        html += `<div class="usage-line"><span class="usage-label">已使用：</span>` +
+          used.map(i => `<span class="usage-tag used">${i}</span>`).join('') + `</div>`;
+      }
+      if (unused.length) {
+        html += `<div class="usage-line"><span class="usage-label">未使用：</span>` +
+          unused.map(i => `<span class="usage-tag unused">${i}</span>`).join('') + `</div>`;
+        html += `<div class="usage-note">这道菜用不上它们——${unused.join('、')}大多是配菜或调味角色，留着下一顿更合适。也可以点下面的按钮，专门用剩下的食材再配一道。</div>`;
+        html += `<div class="usage-actions"><button class="btn btn-secondary" type="button" id="use-leftover">用剩下的 ${unused.slice(0, 2).join('、')} 再配一道</button></div>`;
+      } else {
+        html += `<div class="usage-note">你选的食材全部用上了，一点不浪费。</div>`;
+      }
+      usageBox.innerHTML = `<div class="usage">${html}</div>`;
+      const btn = document.getElementById('use-leftover');
+      if (btn) btn.addEventListener('click', () => generateFromLeftovers(unused));
+    }
+
+    function generateFromLeftovers(unused) {
+      const pool = DISHES.filter(dishPasses).filter(d => d.id !== (currentDish && currentDish.id));
+      const fully = pool.filter(d => d.needs.length && d.needs.every(n => unused.includes(n) || (SYNONYMS[n] || []).some(s => unused.includes(s))));
+      let pick;
+      if (fully.length) pick = fully.sort((a, b) => b.needs.length - a.needs.length)[0];
+      else {
+        const partial = pool.filter(d => d.needs.some(n => unused.includes(n)));
+        pick = partial.sort((a, b) => b.needs.filter(n => unused.includes(n)).length - a.needs.filter(n => unused.includes(n)).length)[0];
+      }
+      if (!pick) pick = buildGenericDish(unused);
+      currentDish = pick;
+      resultBanner.hidden = false;
+      resultBannerText.textContent = `用剩下的 ${unused.join('、')} 配的这道`;
+      renderUsage(pick);
+      resultCard.innerHTML = buildRecipeCard(pick, { foot: '这是专门消耗剩余食材的第二道方案。' });
+      nextRecipeBtn.hidden = true;
+      recordRecent(pick.id);
+      document.getElementById('ingredient-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function showResult(dish, banner, foot) {
+      currentDish = dish;
+      resultBanner.hidden = false;
+      resultBannerText.textContent = banner;
+      renderUsage(dish);
+      resultCard.innerHTML = buildRecipeCard(dish, { foot: foot });
+      recordRecent(dish.id);
+    }
+
+    function runGenerate() {
+      if (selected.size === 0) {
+        ingHint.textContent = '先勾选或添加至少一样食材';
+        ingHint.classList.add('warn');
+        setTimeout(updateHint, 2000);
+        return;
+      }
+      bump('ing');
+      const { list, best, miss, blocked } = rankRecipes();
+      rankedMatches = list.length ? list : [best];
+      matchIndex = 0;
+
+      if (blocked) {
+        showResult(buildGenericDish(), '按你的条件没有现成菜谱，给你一个万能炒法',
+          '放宽时间或锅具条件，能匹配到更多菜。');
+        nextRecipeBtn.hidden = true;
+      } else if (list.length) {
+        showResult(list[0], `用你选的 ${selected.size} 样食材，配出了今晚这道`,
+          list.length > 1 ? `还有 ${list.length - 1} 个方案，点下方「换一道」继续看。` : '');
+        nextRecipeBtn.hidden = list.length <= 1;
+      } else if (best.id === 'generic') {
+        showResult(best, '为你自由发挥了一道菜', '这些食材没有现成菜谱，给你配了万能炒法。');
+        nextRecipeBtn.hidden = true;
+      } else {
+        showResult(best, '差一点点就能做这道菜',
+          `还差：${miss.join('、')}。卡片里的「缺料也能做」列出了替代品。`);
+        nextRecipeBtn.hidden = true;
+      }
+      document.getElementById('ingredient-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    generateBtn.addEventListener('click', runGenerate);
+    document.getElementById('mb-generate').addEventListener('click', runGenerate);
+
+    nextRecipeBtn.addEventListener('click', () => {
+      if (!rankedMatches.length) return;
+      matchIndex = (matchIndex + 1) % rankedMatches.length;
+      showResult(rankedMatches[matchIndex], `方案 ${matchIndex + 1} / ${rankedMatches.length}`,
+        '继续点可以循环看，看中哪个就点「开始做」。');
+    });
+
+    /* ==================== 我的收藏 · 最近做过 ==================== */
+    function renderMine() {
+      const box = document.getElementById('mine-chips');
+      if (!box) return;
+      const items = [];
+      stats.favs.forEach(id => { const d = dishById(id); if (d) items.push({ d, fav: true }); });
+      stats.recent.forEach(id => {
+        if (stats.favs.includes(id)) return;
+        const d = dishById(id); if (d) items.push({ d, fav: false });
+      });
+      if (!items.length) {
+        box.innerHTML = `<span class="mine-empty">还没有记录。生成菜谱或点「收藏」后，这里会出现快捷入口。</span>`;
+        return;
+      }
+      box.innerHTML = '';
+      items.forEach(({ d, fav }) => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'mine-chip';
+        chip.innerHTML = `${fav ? '<span class="star">★</span>' : ''}${d.title}`;
+        chip.addEventListener('click', () => {
+          showResult(d, fav ? '来自你的收藏' : '最近做过这道', '点「开始做」可进入分步烹饪模式。');
+          document.getElementById('ingredient-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+        box.appendChild(chip);
+      });
+    }
+    renderMine();
+    renderStats();
+
+    /* ==================== 对话点菜 ==================== */
+    const demoBody = document.getElementById('demo-body');
+    const demoInput = document.getElementById('demo-input');
+    const demoSend = document.getElementById('demo-send');
+    const chips = document.querySelectorAll('.chip');
+
+    function scrollToBottom() { demoBody.scrollTop = demoBody.scrollHeight; }
+    function escapeHtml(str) { return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function addUserBubble(text) {
+      const row = document.createElement('div');
+      row.className = 'msg-row user';
+      row.innerHTML = `<div class="bubble user">${escapeHtml(text)}</div>`;
+      demoBody.appendChild(row); scrollToBottom();
+    }
+    function showTyping() {
+      const row = document.createElement('div');
+      row.className = 'msg-row ai'; row.id = 'typing-row';
+      row.innerHTML = `<div class="bubble ai typing"><span></span><span></span><span></span></div>`;
+      demoBody.appendChild(row); scrollToBottom();
+    }
+    function removeTyping() { const t = document.getElementById('typing-row'); if (t) t.remove(); }
+    function addAiBubble(html) {
+      removeTyping();
+      const row = document.createElement('div');
+      row.className = 'msg-row ai';
+      row.innerHTML = `<div class="bubble ai">${html}</div>`;
+      demoBody.appendChild(row); scrollToBottom();
+    }
+
+    const scenarios = {
+      '冰箱只剩泡面': { text: '那就把泡面升级成部队锅！', dishId: 'budae' },
+      '想吃辣的': { text: '辣味最能下饭，这道 12 分钟能上桌：', dishId: 'lajiao' },
+      '减脂期也能吃': { text: '减脂期也可以吃得满足，约 380 大卡：', dishId: 'shala' },
+      '深夜十一点': { text: '深夜要快、轻、暖，5 分钟这碗最合适：', dishId: 'yangchun' }
+    };
+
+    const weekPlan = `
+      <div class="recipe-card" data-dish-id="fanqie">
+        <div class="rc-block">
+          <h5>一人食一周计划</h5>
+          <ul class="rc-amounts">
+            <li>周一：番茄滑蛋青菜盖饭</li><li>周二：照烧鸡腿饭</li>
+            <li>周三：青椒肉丝炒面</li><li>周四：鲜虾豆腐汤</li>
+            <li>周五：麻婆豆腐饭</li><li>周六：韩式泡菜炒饭</li>
+            <li>周日：红烧排骨饭</li>
+          </ul>
+        </div>
+        <p class="rc-line" style="margin-top:12px;color:var(--text-4);font-size:12px;">想看哪道的具体用量和做法，把菜名告诉我，比如「照烧鸡腿饭怎么做」。</p>
+      </div>`;
+
+    const ingredientList = ['鸡蛋', '黄瓜', '西红柿', '番茄', '青菜', '白菜', '土豆', '胡萝卜', '洋葱', '鸡胸肉', '鸡腿', '猪肉', '牛肉', '虾', '豆腐', '泡面', '米饭', '面条', '芝士', '泡菜', '午餐肉', '排骨'];
+
+    const ingredientDishes = [
+      { keys: ['黄瓜', '鸡蛋'], dishId: 'huanggua', text: '用黄瓜和鸡蛋，做个清爽快手的：' },
+      { keys: ['青菜', '鸡蛋'], dishId: 'fanqie', text: '这两个食材最搭：' },
+      { keys: ['西红柿', '鸡蛋'], dishId: 'fanqiechaodan', text: '经典组合不会错：' },
+      { keys: ['番茄', '鸡蛋'], dishId: 'fanqiechaodan', text: '经典组合不会错：' },
+      { keys: ['泡面'], dishId: 'budae', text: '泡面也能吃得有仪式感：' },
+      { keys: ['鸡蛋', '米饭'], dishId: 'conghua', text: '有鸡蛋和米饭就很好办：' },
+      { keys: ['鸡蛋'], dishId: 'conghua', text: '有鸡蛋就很好办：' },
+      { keys: ['黄瓜'], dishId: 'paigu', text: '黄瓜清爽，简单一拍就下饭：' },
+      { keys: ['牛肉', '土豆'], dishId: 'niurou', text: '这俩是绝配：' },
+      { keys: ['豆腐'], dishId: 'doufu', text: '一块豆腐一碗饭：' },
+      { keys: ['排骨'], dishId: 'hongshaopaigu', text: '排骨是下饭神器：' },
+      { keys: ['虾', '豆腐'], dishId: 'xiaren', text: '鲜上加鲜，来一碗：' },
+      { keys: ['泡菜', '米饭'], dishId: 'paocai', text: '清冰箱的最佳解法：' }
+    ];
+
+    function findIngredients(text) { return ingredientList.filter(item => text.includes(item)); }
+    function findIngredientDish(text) {
+      const found = findIngredients(text);
+      if (!found.length) return null;
+      for (const d of ingredientDishes) {
+        if (d.keys.every(k => found.includes(k))) return { ...d, found };
+      }
+      return null;
+    }
+
+    const randomPickIds = DISHES.map(d => d.id);
+    function randomDish() { return randomPickIds[Math.floor(Math.random() * randomPickIds.length)]; }
+
+    const fallbacks = [
+      '这个我还没学会（内测版只认食材、口味、忌口和「随便推荐」）。告诉我冰箱里有什么，我直接给你配。',
+      '这句我听不太懂。你可以说「冰箱里有鸡蛋和黄瓜」「想吃辣的」「没有番茄」，或者直接说「随便推荐一个」。',
+      '我目前只会做菜这一件事，别的问题答不上来。要不先告诉我今晚想吃哪种口味？',
+      '换个说法试试：报食材、说口味、说忌口，或者让我随便推荐一道。'
+    ];
+    let fallbackIndex = 0;
+    function nextFallback() {
+      const msg = fallbacks[fallbackIndex];
+      fallbackIndex = (fallbackIndex + 1) % fallbacks.length;
+      return msg;
+    }
+
+    function getResponse(text) {
+      const lower = text.toLowerCase();
+      if (scenarios[text]) { const s = scenarios[text]; return s.text + buildRecipeCard(dishById(s.dishId)); }
+      if (text === '一周不重样') return '给你一份一周一人食计划，荤素错开：' + weekPlan;
+      if (/随便|推荐|来一个|不知道吃|帮我选|挑一个/.test(text)) {
+        return '那我随便给你推荐一道，用量和做法都在卡片里：' + buildRecipeCard(dishById(randomDish()));
+      }
+      const neg = text.match(/没有([^\s，。]+)|不吃([^\s，。]+)|不要([^\s，。]+)|不爱吃([^\s，。]+)/);
+      if (neg) {
+        const excluded = neg[1] || neg[2] || neg[3] || neg[4];
+        const alts = DISHES.filter(d => d.needs.length > 0 && !d.needs.some(n => n.includes(excluded) || excluded.includes(n)));
+        if (alts.length) return `没有${excluded}也能做，试试这道：` + buildRecipeCard(alts[Math.floor(Math.random() * alts.length)]);
+        return `收到，先排除${excluded}。冰箱里还有什么？`;
+      }
+      const dish = findIngredientDish(text);
+      if (dish) return dish.text + buildRecipeCard(dishById(dish.dishId));
+      const named = DISHES.find(d => text.includes(d.title.replace(/（.*?）/g, '')));
+      if (named) return '这道菜的完整做法在这里：' + buildRecipeCard(named);
+      if (lower.includes('辣')) return '看来你今晚想开胃：' + buildRecipeCard(dishById('lajiao'));
+      if (lower.includes('面')) return '面食脑袋看过来：' + buildRecipeCard(dishById('yangchun'));
+      if (lower.includes('减脂') || lower.includes('减肥') || lower.includes('热量')) return '减脂期也能吃得满足：' + buildRecipeCard(dishById('shala'));
+      if (lower.includes('排骨')) return '今晚吃排骨：' + buildRecipeCard(dishById('hongshaopaigu'));
+      if (lower.includes('豆腐')) return '一块豆腐一碗饭：' + buildRecipeCard(dishById('doufu'));
+      if (lower.includes('肉') || lower.includes('荤')) return '那今晚加个荤：' + buildRecipeCard(dishById('niurou'));
+      if (lower.includes('素') || lower.includes('清淡')) return '清淡点好：' + buildRecipeCard(dishById('fanqie'));
+      return nextFallback();
+    }
+
+    function handleSend(text) {
+      if (!text.trim()) return;
+      addUserBubble(text);
+      demoInput.value = '';
+      demoInput.disabled = true; demoSend.disabled = true;
+      showTyping();
+      bump('chat');
+      setTimeout(() => {
+        addAiBubble(getResponse(text));
+        demoInput.disabled = false; demoSend.disabled = false; demoInput.focus();
+      }, 700 + Math.random() * 500);
+    }
+
+    demoSend.addEventListener('click', () => handleSend(demoInput.value));
+    demoInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSend(demoInput.value); });
+    chips.forEach(chip => chip.addEventListener('click', () => handleSend(chip.dataset.topic)));
+
+    addUserBubble('今晚想吃点热乎的，冰箱里有鸡蛋和青菜');
+    addAiBubble('这两样最搭，给你配一份带用量的：' + buildRecipeCard(dishById('fanqie')));
+
+    /* ==================== 今晚盲盒 ==================== */
+    const blindPool = DISHES.filter(d => d.img);
+    const blindCondsBox = document.getElementById('blind-conds');
+    const boxWrap = document.getElementById('box-wrap');
+    const boxStatus = document.getElementById('box-status');
+    const openBoxBtn = document.getElementById('open-box');
+    const blindResult = document.getElementById('blindbox-result');
+    const blindConds = [
+      { label: '15 分钟内', test: d => d.minutes <= 15 },
+      { label: '不辣', test: d => !d.spicy },
+      { label: '只用一口锅', test: d => (d.toolKeys || []).some(t => ['炒锅', '平底锅', '汤锅'].includes(t)) }
+    ];
+    const activeConds = new Set();
+    blindConds.forEach((c, i) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'cond-chip'; b.textContent = c.label;
+      b.setAttribute('aria-pressed', 'false');
+      b.addEventListener('click', () => {
+        const on = b.getAttribute('aria-pressed') === 'true';
+        b.setAttribute('aria-pressed', on ? 'false' : 'true');
+        if (on) activeConds.delete(i); else activeConds.add(i);
+        const pool = currentBlindPool();
+        boxStatus.textContent = pool.length
+          ? `当前条件下有 ${pool.length} 道菜可抽`
+          : '这个条件下暂时没有菜，少选一个条件试试';
+        openBoxBtn.disabled = pool.length === 0;
+        openBoxBtn.style.opacity = pool.length === 0 ? '0.5' : '';
+      });
+      blindCondsBox.appendChild(b);
+    });
+
+    function currentBlindPool() {
+      let pool = blindPool.filter(d => Array.from(activeConds).every(i => blindConds[i].test(d)));
+      if (selected.size) {
+        const withSel = pool.filter(d => {
+          const text = d.amounts.join(' ') + ' ' + d.needs.join(' ');
+          return Array.from(selected).some(i => text.includes(i) || (SYNONYMS[i] || []).some(s => text.includes(s)));
+        });
+        if (withSel.length) pool = withSel;
+      }
+      return pool;
+    }
+
+    let rolling = false, openedCount = 0, bag = [];
+    boxStatus.textContent = `盒子里装着 ${blindPool.length} 道一人食惊喜`;
+
+    function drawFromBag(pool) {
+      if (bag.length === 0) {
+        bag = pool.slice();
+        for (let i = bag.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [bag[i], bag[j]] = [bag[j], bag[i]];
+        }
+      }
+      return bag.pop();
+    }
+
+    function fireConfetti() {
+      const stage = document.getElementById('blindbox-stage');
+      const confetti = document.createElement('div');
+      confetti.className = 'confetti';
+      const colors = ['#FF5A5F', '#F2A93B', '#5BB98B', '#FF8A94', '#FDF3E3'];
+      for (let i = 0; i < 26; i++) {
+        const dot = document.createElement('span');
+        const angle = (Math.PI * 2 * i) / 26 + Math.random() * 0.5;
+        const dist = 120 + Math.random() * 160;
+        dot.style.setProperty('--dx', `${Math.cos(angle) * dist}px`);
+        dot.style.setProperty('--dy', `${Math.sin(angle) * dist}px`);
+        dot.style.setProperty('--rot', `${Math.random() * 540 - 270}deg`);
+        dot.style.background = colors[i % colors.length];
+        confetti.appendChild(dot);
+      }
+      stage.appendChild(confetti);
+      setTimeout(() => confetti.remove(), 1000);
+    }
+
+    function openBox() {
+      if (rolling) return;
+      const pool = currentBlindPool();
+      if (!pool.length) { boxStatus.textContent = '这个条件下暂时没有菜，少选一个条件试试'; return; }
+      rolling = true;
+      blindResult.classList.remove('show');
+      openBoxBtn.disabled = true; openBoxBtn.style.opacity = '0.55';
+      boxWrap.classList.add('shaking');
+      bump('blind');
+
+      const names = pool.map(d => d.title);
+      let idx = 0;
+      boxStatus.innerHTML = `正在抽取：<span class="roll">${names[0]}</span>`;
+      const timer = setInterval(() => {
+        idx = (idx + 1) % names.length;
+        boxStatus.innerHTML = `正在抽取：<span class="roll">${names[idx]}</span>`;
+      }, 120);
+
+      setTimeout(() => {
+        clearInterval(timer);
+        boxWrap.classList.remove('shaking');
+        const pick = drawFromBag(pool);
+        openedCount++;
+        let note = `今晚开出第 ${openedCount} 次 · 当前条件下共 ${pool.length} 道`;
+        if (selected.size) {
+          const { used } = computeUsage(pick);
+          if (used.length) note += ` · 优先用了你选的 ${used.join('、')}`;
+        }
+        blindResult.innerHTML =
+          `<div class="result-banner"><span class="dot" aria-hidden="true"></span>${note}</div>` +
+          buildRecipeCard(pick, { foot: '开出来就是缘分。点「开始做」进入分步烹饪模式，或继续开下一个。' }) +
+          `<div style="margin-top:14px;"><button class="btn btn-secondary" type="button" id="reopen-box">再开一个</button></div>`;
+        blindResult.classList.add('show');
+        const reopen = document.getElementById('reopen-box');
+        if (reopen) reopen.addEventListener('click', openBox);
+        boxStatus.innerHTML = `今晚开出：<span class="roll">${pick.title}</span>`;
+        fireConfetti();
+        openBoxBtn.disabled = false; openBoxBtn.style.opacity = '';
+        rolling = false;
+        recordRecent(pick.id);
+      }, 1700);
+    }
+
+    openBoxBtn.addEventListener('click', openBox);
+
+    /* ==================== 移动端菜单 ==================== */
+    const menuBtn = document.getElementById('mobile-menu-btn');
+    const mobileNav = document.getElementById('mobile-nav');
+    menuBtn.addEventListener('click', () => {
+      const open = mobileNav.classList.toggle('open');
+      menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      menuBtn.setAttribute('aria-label', open ? '关闭导航菜单' : '打开导航菜单');
+    });
+    mobileNav.querySelectorAll('a').forEach(a => {
+      a.addEventListener('click', () => {
+        mobileNav.classList.remove('open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+      });
+    });
+  </script>
+</body>
+</html>
