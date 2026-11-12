@@ -2,7 +2,7 @@
 
 一人食菜谱匹配网页。项目使用原生 HTML、CSS 和 JavaScript，没有后端、账号系统、构建步骤或 npm 依赖。
 
-交接记录中的演示地址：[yirenshiguang.bigapple.work](https://yirenshiguang.bigapple.work/)。演示站与本仓库分别维护，线上内容以实际部署的版本为准。
+在线演示：[yirenshiguang.netlify.app](https://yirenshiguang.netlify.app/)，由 Netlify 从本仓库的 `main` 分支自动部署。交接记录中的旧演示站 [yirenshiguang.bigapple.work](https://yirenshiguang.bigapple.work/) 与本仓库分别维护，内容可能不是最新版本。
 
 ## 本地预览与部署
 
@@ -13,6 +13,14 @@ python3 -m http.server 8080 --bind 127.0.0.1
 ```
 
 打开 [http://127.0.0.1:8080](http://127.0.0.1:8080)。部署时把 `index.html` 和 `assets/` 一起放到静态站点根目录，保持相对路径。唯一外部页面资源是 Google Fonts 的 Noto Sans SC；无法加载时使用系统字体。
+
+### Netlify 部署
+
+无需构建：构建命令和发布目录留空（发布仓库根目录），分支选 `main`。之后每次推送到 `main` 会自动重新部署。
+
+### 测试
+
+`node tests/logic.test.js` 在 Node 里执行页面脚本并检查筛选、匹配、本地存储和配图文件，不需要安装任何依赖。改动筛选逻辑或菜谱数据后先运行它，再按下面的清单手动走查界面。
 
 ## 三个入口
 
@@ -45,5 +53,5 @@ python3 -m http.server 8080 --bind 127.0.0.1
 ## 仍有限制
 
 - 这是固定菜谱库和关键词匹配。忌口只依据代码已列出的用料和调料，无法判断不同品牌的复合调味料或未列成分；也没有严格素食或过敏原筛查。
-- 菜谱内容、参考用量和时间仍需试做校对。添加菜谱或图片后需要重新部署静态文件。
+- 菜谱内容、参考用量和时间仍需试做校对。添加菜谱或图片后，推送到 `main` 即可自动重新部署。
 - 原设计稿：Ardot 画布 `720406084232457`。主色为珊瑚橙 `#FF5A5F`，按钮深红 `#C93F45`，背景暖奶油色 `#FDF8F1`。
