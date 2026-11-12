@@ -68,8 +68,6 @@
     .btn-primary:hover { background: var(--coral-btn-hover); }
     .btn-secondary { background: var(--white); color: var(--text-2); border: 1.5px solid var(--border); }
     .btn-secondary:hover { border-color: var(--coral-btn); color: var(--coral-deep); }
-    .btn-ghost { background: transparent; color: var(--text-2); border: 1.5px solid transparent; }
-    .btn-ghost:hover { color: var(--coral-deep); }
 
     .mobile-menu { display: none; width: 44px; height: 44px; background: none; border: none; cursor: pointer; color: var(--text); }
     .mobile-nav { display: none; border-top: 1px solid var(--border); background: var(--white); padding: 8px 0 16px; }
@@ -293,9 +291,6 @@
     .footer-col a { display: block; font-size: 13px; margin-bottom: 10px; color: #C3B2A4; }
     .footer-col a:hover { color: #fff; text-decoration: underline; }
     .footer-bottom { border-top: 1px solid #4A382E; padding-top: 16px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; flex-wrap: wrap; gap: 10px; color: #B49F90; }
-    .local-stats { margin-top: 18px; font-size: 12px; color: #B49F90; }
-    .local-stats summary { cursor: pointer; font-weight: 600; color: #D3C3B4; }
-    .local-stats ul { list-style: none; margin-top: 8px; line-height: 1.9; }
 
     /* Mobile sticky bar */
     .mobile-bar {
@@ -630,10 +625,6 @@
         <span>2026 · 一人食光 · 一个人，也要好好吃饭</span>
         <span>内测版 · 基于 <span data-recipe-count>17</span> 道菜谱匹配，不是实时 AI</span>
       </div>
-      <details class="local-stats">
-        <summary>本机使用统计（仅保存在你的浏览器，不会上传）</summary>
-        <ul id="stats-list"></ul>
-      </details>
     </div>
   </footer>
 
@@ -845,50 +836,38 @@
       document.getElementById(id).scrollIntoView({ block: 'start' });
     }
 
-    /* ==================== 本地存储：统计 / 收藏 / 最近 ==================== */
-    const STATS_KEY = 'yirenshiguang_stats_v2';
-    const statCounters = ['ing', 'chat', 'blind', 'up', 'down', 'cook'];
+    /* ==================== 本地存储：收藏 / 最近看过 ==================== */
+    // 键名沿用旧版，已有用户的收藏不丢；旧版遗留的计数字段会在下次保存时被丢弃。
+    const STORE_KEY = 'yirenshiguang_stats_v2';
+    const RECENT_LIMIT = 8;
 
-    function normalizeStats(stored = {}) {
+    function normalizeStore(stored = {}) {
       const readIds = ids => Array.isArray(ids) ? [...new Set(ids.filter(id => dishById(id)))] : [];
-      return {
-        ...Object.fromEntries(statCounters.map(key => [
-          key, Number.isSafeInteger(stored[key]) && stored[key] >= 0 ? stored[key] : 0
-        ])),
-        favs: readIds(stored.favs),
-        recent: readIds(stored.recent).slice(0, 8)
-      };
+      return { favs: readIds(stored.favs), recent: readIds(stored.recent).slice(0, RECENT_LIMIT) };
     }
-
-    function loadStats() {
-      try { return normalizeStats(JSON.parse(localStorage.getItem(STATS_KEY) || '{}') || {}); }
+    function loadStore() {
+      try { return normalizeStore(JSON.parse(localStorage.getItem(STORE_KEY) || '{}') || {}); }
       catch { return null; }
     }
 
-    const stats = loadStats() || normalizeStats();
+    const store = loadStore() || normalizeStore();
     let storageWritable = true;
-    function refreshStats() {
+    function saveStore() {
       if (!storageWritable) return;
-      const stored = loadStats();
-      if (stored) Object.assign(stats, stored);
-    }
-    function saveStats() {
-      if (!storageWritable) return;
-      try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); }
+      try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); }
       catch { storageWritable = false; }
     }
-    function bump(key) {
-      refreshStats();
-      stats[key] += 1;
-      saveStats();
-      renderStats();
+    // 写入前先读回最新值，避免多个标签页互相覆盖。
+    function refreshStore() {
+      if (!storageWritable) return;
+      const stored = loadStore();
+      if (stored) Object.assign(store, stored);
     }
-    function isFav(id) { return stats.favs.includes(id); }
+    function isFav(id) { return store.favs.includes(id); }
     function toggleFav(id) {
-      refreshStats();
-      stats.favs = isFav(id) ? stats.favs.filter(x => x !== id) : [...stats.favs, id];
-      saveStats();
-      renderStats();
+      refreshStore();
+      store.favs = isFav(id) ? store.favs.filter(x => x !== id) : [...store.favs, id];
+      saveStore();
       renderMine();
       syncFavoriteButtons();
     }
@@ -900,29 +879,12 @@
         button.setAttribute('aria-pressed', String(favorite));
       });
     }
-    window.addEventListener('storage', event => {
-      if (event.key !== STATS_KEY && event.key !== null) return;
-      refreshStats();
-      renderStats();
-      renderMine();
-      syncFavoriteButtons();
-    });
     function recordRecent(id) {
-      refreshStats();
-      if (!dishById(id) || stats.recent[0] === id) return;
-      stats.recent = [id, ...stats.recent.filter(x => x !== id)].slice(0, 8);
-      saveStats();
+      refreshStore();
+      if (!dishById(id) || store.recent[0] === id) return;
+      store.recent = [id, ...store.recent.filter(x => x !== id)].slice(0, RECENT_LIMIT);
+      saveStore();
       renderMine();
-    }
-
-    function renderStats() {
-      const el = document.getElementById('stats-list');
-      if (!el) return;
-      el.innerHTML =
-        `<li>按食材配菜：${stats.ing} 次</li><li>对话点菜：${stats.chat} 次</li>` +
-        `<li>今晚盲盒：${stats.blind} 次</li><li>进入烹饪模式：${stats.cook} 次</li>` +
-        `<li>反馈：满意 ${stats.up} 次 / 不满意 ${stats.down} 次</li>` +
-        `<li>收藏：${stats.favs.length} 道</li>`;
     }
 
     /* ==================== 统一菜谱卡 ==================== */
@@ -969,19 +931,15 @@
           <div class="rc-actions">
             <button class="btn btn-primary" type="button" data-action="cook">开始做</button>
             <button class="btn btn-secondary" type="button" data-action="fav" aria-pressed="${isFav(dish.id)}">${isFav(dish.id) ? '已收藏' : '收藏'}</button>
-            <button class="btn btn-ghost" type="button" data-action="up">满意</button>
-            <button class="btn btn-ghost" type="button" data-action="down">不满意</button>
           </div>
           ${opts.foot ? `<p class="rc-line" style="margin-top:12px;color:var(--text-4);font-size:12px;">${escapeHtml(opts.foot)}</p>` : ''}
         </div>`;
     }
 
     function setCooking(card, enabled, announce = false) {
-      const wasCooking = card.classList.contains('cooking');
       card.classList.toggle('cooking', enabled);
       card.querySelector('[data-action="cook"]').textContent = enabled ? '退出烹饪模式' : '开始做';
       card.querySelector('.cook-progress').hidden = !enabled;
-      if (enabled && !wasCooking) bump('cook');
       updateProgress(card, announce);
       if (!enabled) card.querySelector('.rc-fb').textContent = '';
     }
@@ -1007,9 +965,6 @@
       } else if (action === 'fav') {
         toggleFav(id);
         fb.textContent = isFav(id) ? '已收藏，可在「我的收藏 · 最近看过」里打开。' : '已取消收藏。';
-      } else if (action === 'up' || action === 'down') {
-        bump(action);
-        fb.textContent = '反馈已记录在当前浏览器。';
       }
     });
 
@@ -1029,7 +984,8 @@
       { label: '海鲜', key: '海鲜' },
       { label: '牛肉', key: '牛肉' },
       { label: '猪肉', key: '猪肉' },
-      { label: '豆制品', key: '豆制品' }
+      { label: '豆腐/豆制品', key: '豆制品' },
+      { label: '大豆/酱油', key: '大豆' }
     ];
     const TOOL_OPTIONS = [
       { label: '炒锅', keys: ['炒锅'] },
@@ -1057,7 +1013,7 @@
           const on = b.getAttribute('aria-pressed') === 'true';
           b.setAttribute('aria-pressed', on ? 'false' : 'true');
           if (on) prefs.avoid.delete(opt.key); else prefs.avoid.add(opt.key);
-          clearIngredientResult();
+          prefsChanged();
         });
         avoidBox.appendChild(b);
       });
@@ -1070,7 +1026,7 @@
           const on = b.getAttribute('aria-pressed') === 'true';
           b.setAttribute('aria-pressed', on ? 'false' : 'true');
           opt.keys.forEach(k => { if (on) prefs.tools.delete(k); else prefs.tools.add(k); });
-          clearIngredientResult();
+          prefsChanged();
         });
         toolBox.appendChild(b);
       });
@@ -1084,7 +1040,7 @@
           b.setAttribute('aria-pressed', 'true');
           if (prefs.maxTime === opt.value) return;
           prefs.maxTime = opt.value;
-          clearIngredientResult();
+          prefsChanged();
         });
         timeBox.appendChild(b);
       });
@@ -1112,12 +1068,19 @@
       return [key, ...(ingredientAliases.get(key) || [])].some(alias => text.includes(alias));
     };
 
+    // 食材按钮只列出至少有一道菜用作主要食材的项目；完整词表仍用于聊天识别。
+    const neededNames = new Set(DISHES.flatMap(dish => dish.needs));
+    const CHIP_GROUPS = INGREDIENT_GROUPS
+      .map(group => ({ ...group, items: group.items.filter(name => neededNames.has(canonicalName(name))) }))
+      .filter(group => group.items.length);
+
     const dietPatterns = new Map([
       ['辣', /辣椒|辣酱|小米辣|螺丝椒|青尖椒|杭椒/],
       ['海鲜', /虾|蛤蜊|蚝油|鱼|蟹|鱿鱼/],
       ['猪肉', /猪|五花肉|排骨|午餐肉|培根|火腿|香肠/],
       ['牛肉', /牛肉|牛里脊|牛排/],
-      ['豆制品', /豆腐|酱油|生抽|老抽|豆瓣酱|豆豉|味噌/]
+      ['豆制品', /豆腐|豆干|豆浆|腐竹/],
+      ['大豆', /豆腐|豆干|豆浆|腐竹|酱油|生抽|老抽|豆瓣酱|豆豉|味噌/]
     ]);
     const recipeIngredients = new Map(DISHES.map(dish => [
       dish.id, [...dish.needs, ...dish.amounts, dish.seasoning, ...dish.steps].join(' ')
@@ -1138,8 +1101,19 @@
         }
       }
       const fitsTools = keys => keys?.every(key => tools.has(key));
-      if (tools.size && !fitsTools(dish.toolKeys) && !fitsTools(dish.alternateToolKeys)) return false;
+      // 无需开火的菜不依赖任何锅具，始终可做。
+      const noFire = dish.toolKeys.includes('无需开火');
+      if (tools.size && !noFire && !fitsTools(dish.toolKeys) && !fitsTools(dish.alternateToolKeys)) return false;
       return maxTime === null || dish.minutes <= maxTime;
+    }
+
+    // 三个入口共用同一组条件：配菜、对话点菜、盲盒、一周计划都经过这里。
+    const prefsActive = () => prefs.avoid.size > 0 || prefs.tools.size > 0 || prefs.maxTime !== null;
+    const passesPrefs = (dish, extraAvoid = []) =>
+      dishPasses(dish, { avoid: [...prefs.avoid, ...extraAvoid], tools: prefs.tools, maxTime: prefs.maxTime });
+    function prefsChanged() {
+      clearIngredientResult();
+      refreshBlindPool(true);
     }
 
     /* ==================== 食材配菜 ==================== */
@@ -1163,7 +1137,7 @@
     let rankedMatches = [];
     let matchIndex = 0;
 
-    INGREDIENT_GROUPS.forEach(group => {
+    CHIP_GROUPS.forEach(group => {
       const wrap = document.createElement('div');
       wrap.className = 'ing-group';
       const title = document.createElement('div');
@@ -1349,8 +1323,9 @@
 
     function showMatch(index) {
       const { dish, missing } = rankedMatches[index];
-      const banner = rankedMatches.length > 1
+      const base = rankedMatches.length > 1
         ? `方案 ${index + 1} / ${rankedMatches.length}` : '按你选的食材找到这道菜';
+      const banner = missing.length ? `${base} · 还缺 ${missing.length} 样主要食材` : base;
       showResult(dish, banner, { ingredients: [...selected], missing, avoid: prefs.avoid });
       nextRecipeBtn.hidden = rankedMatches.length < 2;
     }
@@ -1361,10 +1336,9 @@
         ingHint.classList.add('warn');
         return;
       }
-      bump('ing');
       const matches = rankRecipes(DISHES.filter(dish => dishPasses(dish, prefs)), selected);
-      const complete = matches.filter(match => !match.missing.length);
-      rankedMatches = complete.length ? complete : matches;
+      // rankRecipes 已按缺料数升序：完整匹配在前，缺一两样的方案紧随其后，「换一道」可翻到它们。
+      rankedMatches = matches;
       matchIndex = 0;
       if (rankedMatches.length) showMatch(0);
       else showNoMatch('当前食材和条件下没有匹配的菜谱。可以再补充食材，或检查锅具和时间条件。');
@@ -1385,9 +1359,9 @@
       const box = document.getElementById('mine-chips');
       if (!box) return;
       const items = [];
-      stats.favs.forEach(id => { const d = dishById(id); if (d) items.push({ d, fav: true }); });
-      stats.recent.forEach(id => {
-        if (stats.favs.includes(id)) return;
+      store.favs.forEach(id => { const d = dishById(id); if (d) items.push({ d, fav: true }); });
+      store.recent.forEach(id => {
+        if (store.favs.includes(id)) return;
         const d = dishById(id); if (d) items.push({ d, fav: false });
       });
       if (!items.length) {
@@ -1409,7 +1383,6 @@
       });
     }
     renderMine();
-    renderStats();
 
     /* ==================== 对话点菜 ==================== */
     const demoBody = document.getElementById('demo-body');
@@ -1452,14 +1425,32 @@
     );
     const unknownRequest = '这个我还没学会。可以说说你有的食材、想吃的口味，或者输入「随便推荐一个」。';
 
+    const noMatchReply = () => ({ text: prefsActive()
+      ? '在现有菜谱里没有找到符合条件的菜（已套用上方的忌口、锅具、时间条件）。可以换一组食材，或调整这些条件。'
+      : '在现有菜谱里没有找到符合条件的菜。可以换一组食材试试。' });
+
+    function buildWeekPlan() {
+      const plan = weekPlan.filter(id => passesPrefs(dishById(id)));
+      for (const dish of DISHES) {
+        if (plan.length >= weekdays.length) break;
+        if (!plan.includes(dish.id) && passesPrefs(dish)) plan.push(dish.id);
+      }
+      return plan;
+    }
+
     function getResponse(text) {
       const source = text.replace(/不(?:想|爱|要)?吃素(?:食)?/g, ' ');
       if (/吃素|全素|素食|不吃肉|不加肉|不要肉/.test(source)) {
         return { text: '目前没有严格的素食筛选，可以按具体食材或忌口找菜。' };
       }
-      if (text === '一周不重样') return { text: '给你一份一周一人食计划：', plan: true };
+      if (text === '一周不重样') {
+        const plan = buildWeekPlan();
+        if (!plan.length) return noMatchReply();
+        return { text: plan.length < weekdays.length
+          ? `符合当前条件的菜只有 ${plan.length} 道，先排这些：` : '给你一份一周一人食计划：', plan };
+      }
       const scenario = scenarios.get(text);
-      if (scenario) return { text: scenario.text, dish: dishById(scenario.id) };
+      if (scenario && passesPrefs(dishById(scenario.id))) return { text: scenario.text, dish: dishById(scenario.id) };
 
       const avoid = new Set();
       const request = source.replace(negatedIngredients, (_, items) => {
@@ -1476,15 +1467,16 @@
       const mild = /不辣|清淡|清爽|减脂|减肥|热量/.test(request);
       const fast = /快手/.test(request);
       const warm = /热乎|暖胃/.test(request);
-      const pool = DISHES.filter(dish => dishPasses(dish, { avoid })
+      const pool = DISHES.filter(dish => passesPrefs(dish, avoid)
         && (!spicy || dish.spicy) && (!mild || !dish.spicy)
         && (!fast || dish.minutes <= 15)
         && (!warm || dish.toolKeys.includes('汤锅') || dish.tags.some(tag => tag.includes('暖胃'))));
+      const effectiveAvoid = new Set([...prefs.avoid, ...avoid]);
       const respond = (dish, message, missing = []) => ({
-        text: message, dish, avoid,
+        text: message, dish, avoid: effectiveAvoid,
         foot: missing.length ? `还缺的主要食材：${missing.join('、')}。` : ''
       });
-      const empty = { text: '在现有菜谱里没有找到符合条件的菜。可以换一组食材试试。' };
+      const empty = noMatchReply();
       const named = DISHES.find(dish => request.includes(dish.title.replace(/（.*?）/g, '')));
       if (named) return pool.includes(named) ? respond(named, '这道菜的完整做法在这里：') : empty;
 
@@ -1509,7 +1501,7 @@
 
     function renderReply(reply) {
       if (reply.plan) {
-        const items = weekPlan.map((id, i) => `<li>周${weekdays[i]}：${escapeHtml(dishById(id).title)}</li>`).join('');
+        const items = reply.plan.map((id, i) => `<li>周${weekdays[i]}：${escapeHtml(dishById(id).title)}</li>`).join('');
         addBubble('ai', reply.text, `
           <div class="recipe-card">
             <div class="rc-block"><h5>一人食一周计划</h5><ul class="rc-amounts">${items}</ul></div>
@@ -1527,7 +1519,6 @@
       const reply = getResponse(text);
       renderReply(reply);
       if (reply.dish) recordRecent(reply.dish.id);
-      bump('chat');
       if (focusInput) {
         demoInput.value = '';
         demoInput.focus();
@@ -1581,7 +1572,7 @@
 
     function currentBlindPool() {
       const filters = [...activeConds].map(i => blindConds[i]);
-      const pool = blindPool.filter(dish => filters.every(cond => cond.test(dish)));
+      const pool = blindPool.filter(dish => passesPrefs(dish) && filters.every(cond => cond.test(dish)));
       const preferred = selected.size ? pool.filter(dish => computeUsage(dish).used.length) : [];
       return preferred.length ? preferred : pool;
     }
@@ -1656,7 +1647,7 @@
       const { used } = computeUsage(pick);
       const ingredientsNote = used.length ? ` · 会用到你选的 ${escapeHtml(used.join('、'))}` : '';
       const note = `今晚第 ${openedCount} 次开盒 · 当前有 ${pool.length} 道菜可抽${ingredientsNote}`;
-      const avoid = [...activeConds].some(i => blindConds[i].label === '不辣') ? ['辣'] : [];
+      const avoid = [...prefs.avoid, ...([...activeConds].some(i => blindConds[i].label === '不辣') ? ['辣'] : [])];
       blindResult.innerHTML =
         `<div class="result-banner"><span class="dot" aria-hidden="true"></span>${note}</div>` +
         buildRecipeCard(pick, { avoid }) +
@@ -1666,7 +1657,6 @@
       boxStatus.textContent = `今晚开出：${pick.title}`;
       openBoxBtn.disabled = false;
       recordRecent(pick.id);
-      bump('blind');
       if (animate) fireConfetti();
     }
 
