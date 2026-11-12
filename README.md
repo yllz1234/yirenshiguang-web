@@ -28,11 +28,12 @@ python3 -m http.server 8080 --bind 127.0.0.1
 
 ## 维护菜谱
 
-`index.html` 包含样式、页面和交互逻辑。菜谱集中在其中的 `DISHES`；图片放在 `assets/`。目前 17 道菜谱各有一张配图。新增的 7 张配图为生成的示意图，以 WebP 格式存放。页面菜谱数量由 `DISHES` 计算。
+`index.html` 包含样式、页面和交互逻辑。菜谱集中在其中的 `DISHES`；图片放在 `assets/`。目前 17 道菜谱各有一张配图，统一为 WebP 格式。页面菜谱数量由 `DISHES` 计算。
 
 | 字段 | 用途 |
 | --- | --- |
 | `id`、`title`、`img` | 唯一标识、菜名和相对图片路径。`img: null` 时隐藏图片区，该菜不参与盲盒。 |
+| `week`、`topic`、`light` | 可选。`week`（1–7）把这道菜排进「一周不重样」的第几天；`topic: { query, reply }` 让快捷话题 `query` 直接推荐这道菜；`light: true` 标记「清爽」类需求的优先推荐。 |
 | `needs` | 主要食材，用于计算缺项。名称使用 `INGREDIENT_GROUPS` 中的标准名称；别名在 `ingredientAliases` 定义。常备调料和配菜仍以完整用料为准。 |
 | `toolKeys`、`alternateToolKeys` | 每组内的锅具都要满足；如有可替代的一组，用 `alternateToolKeys` 表示。 |
 | `minutes`、`spicy` | 参考时间和原做法是否必须用辣味。可选辣味应在用料和步骤里都标明。 |

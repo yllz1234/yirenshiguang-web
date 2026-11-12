@@ -632,7 +632,7 @@
     /* ==================== 菜谱数据 ==================== */
     const DISHES = [
       {
-        id: 'fanqie', title: '番茄滑蛋青菜盖饭', img: 'assets/fanqie.webp', minutes: 15, spicy: false, toolKeys: ['炒锅'],
+        id: 'fanqie', title: '番茄滑蛋青菜盖饭', img: 'assets/fanqie.webp', minutes: 15, spicy: false, toolKeys: ['炒锅'], week: 1,
         tags: ['15 分钟', '一人份', '清淡暖胃'],
         desc: '酸甜番茄汤底，滑蛋裹着热饭，热乎下肚',
         needs: ['西红柿', '鸡蛋', '青菜', '米饭'],
@@ -643,7 +643,7 @@
         subs: { '西红柿': '番茄酱 2 勺 + 清水 50ml', '青菜': '菠菜 / 生菜 / 娃娃菜', '鸡蛋': '嫩豆腐半盒（无鸡蛋替换）' }
       },
       {
-        id: 'huanggua', title: '黄瓜炒鸡蛋盖饭', img: 'assets/huanggua.png', minutes: 12, spicy: false, toolKeys: ['炒锅'],
+        id: 'huanggua', title: '黄瓜炒鸡蛋盖饭', img: 'assets/huanggua.webp', minutes: 12, spicy: false, toolKeys: ['炒锅'], week: 3,
         tags: ['12 分钟', '一人份', '清爽开胃'],
         desc: '黄瓜脆嫩、鸡蛋鲜香，配热米饭刚好不油不腻',
         needs: ['黄瓜', '鸡蛋', '米饭'],
@@ -654,7 +654,7 @@
         subs: { '黄瓜': '西葫芦 / 青椒 / 莴笋', '鸡蛋': '鸡胸肉丝 80g' }
       },
       {
-        id: 'lajiao', title: '辣椒小炒肉盖饭', img: 'assets/lajiao.png', minutes: 12, spicy: true, toolKeys: ['炒锅'],
+        id: 'lajiao', title: '辣椒小炒肉盖饭', img: 'assets/lajiao.webp', minutes: 12, spicy: true, toolKeys: ['炒锅'],
         tags: ['12 分钟', '香辣下饭', '一人份'],
         desc: '五花肉煸得微焦，辣椒炒出香气，配热米饭一绝',
         needs: ['猪肉', '辣椒', '米饭'],
@@ -665,7 +665,7 @@
         subs: { '猪肉': '梅花肉 / 鸡腿肉 / 培根', '辣椒': '青尖椒 / 杭椒（辣度更低）' }
       },
       {
-        id: 'hongshaopaigu', title: '红烧排骨饭', img: 'assets/hongshaopaigu.webp', minutes: 35, spicy: false, toolKeys: ['炒锅', '汤锅'], alternateToolKeys: ['炒锅', '压力锅'],
+        id: 'hongshaopaigu', title: '红烧排骨饭', img: 'assets/hongshaopaigu.webp', minutes: 35, spicy: false, toolKeys: ['炒锅', '汤锅'], alternateToolKeys: ['炒锅', '压力锅'], week: 7,
         tags: ['35 分钟', '酱香浓郁', '一人份'],
         desc: '小块排骨慢炖入味，酱汁拌饭吃光一整碗',
         needs: ['排骨', '米饭'],
@@ -676,7 +676,7 @@
         subs: { '冰糖': '白糖 10g（颜色略浅）', '八角': '五香粉 1g', '排骨': '鸡翅中 4 只（时间缩短到 18 分钟）' }
       },
       {
-        id: 'shala', title: '柠檬鸡胸温沙拉', img: 'assets/salad.png', minutes: 20, spicy: false, toolKeys: ['平底锅', '汤锅'],
+        id: 'shala', title: '柠檬鸡胸温沙拉', img: 'assets/salad.webp', minutes: 20, spicy: false, toolKeys: ['平底锅', '汤锅'], light: true, topic: { query: '想吃清爽的', reply: '想吃清爽一些，可以看看这份鸡胸肉温沙拉。' },
         tags: ['20 分钟', '柠檬清香', '温沙拉'],
         desc: '嫩滑鸡胸肉搭配温热蔬菜，淋柠檬汁和橄榄油',
         needs: ['鸡胸肉', '西兰花', '西红柿', '胡萝卜', '柠檬'],
@@ -687,7 +687,7 @@
         subs: { '鸡胸肉': '虾仁 120g / 老豆腐 200g', '西兰花': '芦笋 / 生菜 / 菠菜', '小番茄': '等量切块西红柿', '柠檬': '米醋 10ml + 少许糖' }
       },
       {
-        id: 'budae', title: '韩式部队锅（一人份）', img: 'assets/budae.png', minutes: 15, spicy: true, toolKeys: ['汤锅'],
+        id: 'budae', title: '韩式部队锅（一人份）', img: 'assets/budae.webp', minutes: 15, spicy: true, toolKeys: ['汤锅'], topic: { query: '冰箱只剩泡面', reply: '如果还能补齐午餐肉、泡菜、鸡蛋和芝士，可以把泡面做成部队锅。' },
         tags: ['15 分钟', '一锅端', '浓郁暖胃'],
         desc: '泡面吸满浓郁汤底，配午餐肉和芝士，深夜治愈',
         needs: ['泡面', '午餐肉', '泡菜', '鸡蛋', '芝士'],
@@ -698,7 +698,7 @@
         subs: { '午餐肉': '火腿 / 培根 / 香肠', '芝士片': '马苏里拉碎 30g', '泡菜': '酸菜 80g（风味不同但开胃）' }
       },
       {
-        id: 'yangchun', title: '快手阳春面', img: 'assets/noodle.png', minutes: 5, spicy: false, toolKeys: ['汤锅'],
+        id: 'yangchun', title: '快手阳春面', img: 'assets/noodle.webp', minutes: 5, spicy: false, toolKeys: ['汤锅'], topic: { query: '深夜十一点', reply: '想简单吃点热乎的，可以试试这碗面。' },
         tags: ['5 分钟', '暖胃', '轻负担'],
         desc: '清汤挂面配猪油香，简单却不敷衍',
         needs: ['面条'],
@@ -731,7 +731,7 @@
         subs: { '牛肉': '鸡腿肉 / 猪里脊', '土豆': '胡萝卜 / 藕 / 南瓜', '黑胡椒酱': '蚝油 10g + 黑胡椒碎 2g' }
       },
       {
-        id: 'doufu', title: '麻婆豆腐饭', img: 'assets/doufu.webp', minutes: 15, spicy: true, toolKeys: ['炒锅'],
+        id: 'doufu', title: '麻婆豆腐饭', img: 'assets/doufu.webp', minutes: 15, spicy: true, toolKeys: ['炒锅'], week: 5,
         tags: ['15 分钟', '麻辣下饭', '一人份'],
         desc: '豆腐嫩滑入味，红油亮泽，一勺饭一勺豆腐',
         needs: ['豆腐', '猪肉', '米饭'],
@@ -764,7 +764,7 @@
         subs: { '西红柿': '番茄罐头 200g', '糖': '代糖少许', '鸡蛋': '嫩豆腐块' }
       },
       {
-        id: 'zhaoshao', title: '照烧鸡腿饭', img: 'assets/zhaoshao.png', minutes: 20, spicy: false, toolKeys: ['平底锅'],
+        id: 'zhaoshao', title: '照烧鸡腿饭', img: 'assets/zhaoshao.webp', minutes: 20, spicy: false, toolKeys: ['平底锅'], week: 2,
         tags: ['20 分钟', '酱香浓郁', '一人份'],
         desc: '外皮焦香、内里多汁，照烧汁拌饭根本停不下来',
         needs: ['鸡腿', '米饭'],
@@ -775,7 +775,7 @@
         subs: { '鸡腿': '鸡胸肉 / 老豆腐片', '味淋': '米酒 10ml + 糖 3g', '西兰花': '芦笋 / 生菜' }
       },
       {
-        id: 'danbao', title: '芝士蛋包饭', img: 'assets/danbao.png', minutes: 18, spicy: false, toolKeys: ['平底锅'],
+        id: 'danbao', title: '芝士蛋包饭', img: 'assets/danbao.webp', minutes: 18, spicy: false, toolKeys: ['平底锅'],
         tags: ['18 分钟', '芝士拉丝', '治愈系'],
         desc: '金黄蛋皮划开，里面是番茄炒饭，芝士一拉解千愁',
         needs: ['鸡蛋', '米饭', '芝士', '西红柿'],
@@ -786,7 +786,7 @@
         subs: { '芝士碎': '芝士片 2 片撕碎', '番茄': '番茄酱 20g 直接拌饭', '黄油': '食用油 5ml' }
       },
       {
-        id: 'paocai', title: '韩式泡菜炒饭', img: 'assets/paocai.png', minutes: 12, spicy: true, toolKeys: ['炒锅'],
+        id: 'paocai', title: '韩式泡菜炒饭', img: 'assets/paocai.webp', minutes: 12, spicy: true, toolKeys: ['炒锅'], week: 6,
         tags: ['12 分钟', '酸辣开胃', '清冰箱'],
         desc: '泡菜的酸辣裹着米粒，配一颗溏心蛋刚刚好',
         needs: ['泡菜', '米饭', '午餐肉', '鸡蛋'],
@@ -797,7 +797,7 @@
         subs: { '泡菜': '酸豆角 80g / 雪菜 80g（不辣版）', '午餐肉': '培根 / 火腿 / 罐头金枪鱼', '韩式辣酱': '不吃辣可省，加少许糖提鲜' }
       },
       {
-        id: 'xiaren', title: '鲜虾豆腐汤', img: 'assets/xiaren.png', minutes: 15, spicy: false, toolKeys: ['汤锅'],
+        id: 'xiaren', title: '鲜虾豆腐汤', img: 'assets/xiaren.webp', minutes: 15, spicy: false, toolKeys: ['汤锅'], week: 4,
         tags: ['15 分钟', '鲜甜清爽', '一碗管饱'],
         desc: '虾的鲜味融进奶白汤底，豆腐嫩滑，暖到胃里',
         needs: ['虾', '豆腐'],
@@ -808,7 +808,7 @@
         subs: { '鲜虾': '虾仁 100g / 蛤蜊 200g', '嫩豆腐': '鸡蛋豆腐 / 内酯豆腐', '香油': '橄榄油几滴' }
       },
       {
-        id: 'jufan', title: '芝士焗饭', img: 'assets/jufan.png', minutes: 15, spicy: false, toolKeys: ['烤箱'], alternateToolKeys: ['空气炸锅'],
+        id: 'jufan', title: '芝士焗饭', img: 'assets/jufan.webp', minutes: 15, spicy: false, toolKeys: ['烤箱'], alternateToolKeys: ['空气炸锅'],
         tags: ['15 分钟', '芝士控', '一人份'],
         desc: '剩饭的华丽转身，表面烤出金黄焦香的芝士壳',
         needs: ['米饭', '芝士'],
@@ -890,14 +890,12 @@
     /* ==================== 统一菜谱卡 ==================== */
     function buildRecipeCard(dish, opts) {
       opts = opts || {};
-      const head = dish.img
-        ? `<div class="rc-head"><img src="${dish.img}" alt="${dish.title}" class="rc-img" loading="lazy" decoding="async"><div class="rc-info">
+      const image = dish.img
+        ? `<img src="${dish.img}" alt="${dish.title}" class="rc-img" loading="lazy" decoding="async">` : '';
+      const tags = dish.tags.map((t, i) => `<span class="tag ${['coral', 'honey', 'green'][i] || 'green'}">${t}</span>`).join('');
+      const head = `<div class="rc-head">${image}<div class="rc-info">
              <h4 class="rc-title">${dish.title}</h4>
-             <div class="tags">${dish.tags.map((t, i) => `<span class="tag ${i === 0 ? 'coral' : i === 1 ? 'honey' : 'green'}">${t}</span>`).join('')}</div>
-             <p class="rc-desc">${dish.desc}</p></div></div>`
-        : `<div class="rc-head"><div class="rc-info">
-             <h4 class="rc-title">${dish.title}</h4>
-             <div class="tags">${dish.tags.map((t, i) => `<span class="tag ${i === 0 ? 'coral' : i === 1 ? 'honey' : 'green'}">${t}</span>`).join('')}</div>
+             <div class="tags">${tags}</div>
              <p class="rc-desc">${dish.desc}</p></div></div>`;
       const substitutions = Object.entries(dish.subs || {})
         .filter(([, substitute]) => !conflictsWithAvoidance(substitute, opts.avoid || []));
@@ -1400,13 +1398,11 @@
       demoBody.appendChild(row);
     }
 
-    const scenarios = new Map([
-      ['冰箱只剩泡面', { id: 'budae', text: '如果还能补齐午餐肉、泡菜、鸡蛋和芝士，可以把泡面做成部队锅。' }],
-      ['想吃清爽的', { id: 'shala', text: '想吃清爽一些，可以看看这份鸡胸肉温沙拉。' }],
-      ['深夜十一点', { id: 'yangchun', text: '想简单吃点热乎的，可以试试这碗面。' }]
-    ]);
+    // 快捷话题、一周计划和「清爽」优先项都由 DISHES 里的 topic / week / light 字段决定。
+    const scenarios = new Map(DISHES.filter(dish => dish.topic)
+      .map(dish => [dish.topic.query, { id: dish.id, text: dish.topic.reply }]));
     const weekdays = ['一', '二', '三', '四', '五', '六', '日'];
-    const weekPlan = ['fanqie', 'zhaoshao', 'huanggua', 'xiaren', 'doufu', 'paocai', 'hongshaopaigu'];
+    const weekPlan = DISHES.filter(dish => dish.week).sort((a, b) => a.week - b.week).map(dish => dish.id);
 
     const chatIngredients = [...new Set([
       ...INGREDIENT_GROUPS.flatMap(group => group.items), ...canonicalNames.keys()
@@ -1487,7 +1483,7 @@
       }
 
       if (spicy || mild || fast || warm) {
-        const preferred = mild ? pool.find(dish => dish.id === 'shala') : null;
+        const preferred = mild ? pool.find(dish => dish.light) : null;
         const dish = preferred || [...pool].sort((a, b) => a.minutes - b.minutes)[0];
         return dish ? respond(dish, '这道可以考虑：') : empty;
       }

@@ -17,7 +17,7 @@ const stub = () => new Proxy(function () {}, {
 const doc = stub();
 doc.querySelectorAll = () => [];
 const ctx = {
-  document: doc, assert, console, Math, JSON, Set, Map, RegExp, setTimeout, clearTimeout, setInterval, clearInterval,
+  document: doc, assert, require, __dirname, console, Math, JSON, Set, Map, RegExp, setTimeout, clearTimeout, setInterval, clearInterval,
   window: { addEventListener() {}, matchMedia: () => ({ matches: true }) },
   localStorage: { getItem: () => null, setItem() {} }
 };
@@ -98,6 +98,23 @@ test('旧版本地存储：保留收藏和最近，丢弃计数和无效 id', ()
 
 test('使用统计代码已移除', () => {
   assert(!/bump\\(|renderStats|data-action="(up|down)"/.test(document_source));
+});
+
+test('一周计划、快捷话题、清爽优先项来自菜谱数据且引用有效', () => {
+  assert.strictEqual(weekPlan.length, 7);
+  assert.deepStrictEqual(DISHES.filter(d => d.week).map(d => d.week).sort(), [1, 2, 3, 4, 5, 6, 7]);
+  assert.strictEqual(new Set(DISHES.filter(d => d.topic).map(d => d.topic.query)).size, scenarios.size);
+  assert(DISHES.some(d => d.light));
+});
+
+test('所有配图文件存在，且 assets 里没有无人引用的图片', () => {
+  const dir = require('path').join(__dirname, '..', 'assets');
+  const files = require('fs').readdirSync(dir);
+  const used = DISHES.map(d => d.img.replace('assets/', ''));
+  for (const f of used) assert(files.includes(f), '缺文件 ' + f);
+  const orphans = files.filter(f => !used.includes(f));
+  assert.strictEqual(orphans.length, 0, '无人引用的图片：' + orphans.join(','));
+  assert(files.every(f => f.endsWith('.webp')), '存在非 WebP 图片');
 });
 
 results;
